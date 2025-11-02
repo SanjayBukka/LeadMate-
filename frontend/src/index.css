@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global: force white text inside all form controls across the app */
+@layer base {
+  input,
+  textarea,
+  select {
+    color: #ffffff !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder,
+  select::placeholder {
+    color: #ffffff !important;
+    opacity: 1;
+  }
+
+  /* Improve white text consistency for date/time and file inputs (WebKit/Blink) */
+  input::-webkit-datetime-edit,
+  input::-webkit-datetime-edit-text,
+  input::-webkit-datetime-edit-month-field,
+  input::-webkit-datetime-edit-day-field,
+  input::-webkit-datetime-edit-year-field {
+    color: #ffffff;
+  }
+
+  input[type="file"]::file-selector-button {
+    color: #ffffff;
+  }
+}
