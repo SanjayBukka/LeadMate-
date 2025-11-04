@@ -13,6 +13,8 @@ import requests
 import json
 from pathlib import Path
 import logging
+import time
+import stat
 
 logger = logging.getLogger(__name__)
 
@@ -78,11 +80,24 @@ class GitService:
         try:
             # Create company/lead specific directory
             repo_dir = self.base_dir / company_id / lead_id / repo_name
-            repo_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Remove existing directory if it exists
+            repo_dir.parent.mkdir(parents=True, exist_ok=True)
+
+            def _on_rm_error(func, path, exc_info):
+                try:
+                    os.chmod(path, stat.S_IWRITE)
+                    func(path)
+                except Exception:
+                    pass
+
+            # Remove existing directory if it exists (robustly on Windows)
             if repo_dir.exists():
-                shutil.rmtree(repo_dir)
+                try:
+                    shutil.rmtree(repo_dir, onerror=_on_rm_error)
+                except Exception as e:
+                    # Fallback to a fresh unique directory if removal failed
+                    alt_name = f"{repo_name}_{int(time.time())}"
+                    repo_dir = self.base_dir / company_id / lead_id / alt_name
+                    logger.warning(f"Failed to remove existing repo dir: {e}. Using alt dir {repo_dir}")
             
             # Clone repository
             repo = Repo.clone_from(repo_url, repo_dir)
@@ -101,15 +116,28 @@ class GitService:
             
             # Get remote URL
             remote_url = ""
-            if repo.remotes.origin:
-                remote_url = repo.remotes.origin.url
+            try:
+                if hasattr(repo, "remotes") and repo.remotes:
+                    # prefer origin if present
+                    if hasattr(repo.remotes, "origin"):
+                        remote_url = repo.remotes.origin.url  # type: ignore[attr-defined]
+                    else:
+                        remote_url = next(iter(repo.remotes)).url  # fallback to first remote
+            except Exception:
+                remote_url = ""
+            
+            # Branch (handle detached HEAD)
+            try:
+                branch_name = repo.active_branch.name
+            except Exception:
+                branch_name = "HEAD"
             
             return {
                 "name": os.path.basename(repo_path),
                 "remote_url": remote_url,
-                "branch": repo.active_branch.name,
-                "last_commit": repo.head.commit.hexsha[:8],
-                "last_commit_date": repo.head.commit.committed_datetime.isoformat(),
+                "branch": branch_name,
+                "last_commit": getattr(repo.head.commit, "hexsha", "")[:8] if repo.head and repo.head.is_valid() else "",
+                "last_commit_date": getattr(repo.head.commit, "committed_datetime", datetime.now()).isoformat() if repo.head and repo.head.is_valid() else "",
                 "total_commits": len(list(repo.iter_commits())),
                 "total_branches": len(repo.branches),
                 "is_dirty": repo.is_dirty()
@@ -118,14 +146,41 @@ class GitService:
             logger.error(f"Failed to get repository info: {str(e)}")
             return {}
     
-    def analyze_commits(self, repo_path: str, max_commits: int = 100) -> pd.DataFrame:
+    def analyze_commits(self, repo_path: str, max_commits: Optional[int] = 100) -> pd.DataFrame:
         """Analyze commit history and return DataFrame"""
         try:
             repo = Repo(repo_path)
             commits_data = []
-            
-            # Get commits
-            commits = list(repo.iter_commits(max_count=max_commits))
+
+            # Best-effort fetch all refs to avoid empty HEAD situations
+            try:
+                repo.git.fetch('--all', '--tags', '--prune')
+            except Exception:
+                pass
+
+            # Try from HEAD first
+            commits: List = []
+            try:
+                if max_commits is None:
+                    commits = list(repo.iter_commits())
+                else:
+                    commits = list(repo.iter_commits(max_count=max_commits))
+            except Exception:
+                commits = []
+
+            # If still empty, iterate through branches to collect commits
+            if not commits:
+                try:
+                    for head in repo.heads:
+                        if max_commits is None:
+                            branch_commits = list(repo.iter_commits(head.name))
+                        else:
+                            branch_commits = list(repo.iter_commits(head.name, max_count=max_commits))
+                        commits.extend(branch_commits)
+                        if len(commits) >= max_commits:
+                            break
+                except Exception:
+                    pass
             
             for commit in commits:
                 # Get commit stats

@@ -1,0 +1,147 @@
+\documentclass[12pt]{report}
+
+% Packages
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{enumitem}
+
+% Page setup
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{LEADMATE: AI-POWERED PROJECT MANAGEMENT SYSTEM}
+\fancyhead[R]{\thepage}
+\fancyfoot[C]{}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Section formatting
+\titleformat{\chapter}[hang]{\bfseries\Huge}{\thechapter}{2pc}{}
+\titleformat{\section}{\bfseries\Large}{\thesection}{1em}{}
+\titleformat{\subsection}{\bfseries\large}{\thesubsection}{1em}{}
+
+% -------------------------------
+% Title Page
+% -------------------------------
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+
+% University Logo (centered perfectly)
+\vspace*{0.5cm}
+% \includegraphics[width=0.45\textwidth]{Woxsen Image.png}
+\vspace{0.5cm}
+
+% Project Title
+{\LARGE \textbf{LEADMATE: AI-POWERED PROJECT MANAGEMENT SYSTEM}} \\[0.5cm]
+{\large A Capstone Project Report Submitted in Partial Fulfillment of the Requirements for the Degree of} \\[0.4cm]
+{\large \textbf{Bachelor of Technology in Computer Science and Engineering}} \\[1.0cm]
+
+% Submitted by
+{\large \textbf{Submitted by}} \\[0.3cm]
+{\large Sanjay - 22WU0104159} \\
+{\large Nikunj - 22WU0104153} \\
+{\large Vastav - 22WU0105033} \\[1.0cm]
+
+% Guide details
+{\large \textbf{Under the Guidance of}} \\[0.3cm]
+{\large Anand Kakarla} \\
+{\large Assistant Professor, Woxsen University} \\[1.0cm]
+
+% Department and footer info
+{\large Department of Computer Science and Engineering} \\
+{\large Woxsen University, School of Technology} \\
+{\large Academic Year: 2025--2026, 7th Semester} \\
+{\large November 4, 2025}
+
+\vfill
+\end{titlepage}
+
+% Acknowledgement
+\newpage
+\chapter*{ACKNOWLEDGEMENT}
+\addcontentsline{toc}{chapter}{ACKNOWLEDGEMENT}
+
+We would like to express our sincere gratitude to all those who have helped us in the successful completion of this project.
+
+First and foremost, we express our sincere thanks to our project guide \textbf{Mr. Anand Kakarla}, Assistant Professor, Woxsen University, for his invaluable guidance, constant encouragement, and immense support throughout the duration of the project. His expertise and insights were instrumental in shaping our approach and overcoming technical challenges.
+
+We are also grateful to all the faculty members of the Department of Computer Science and Engineering for their support and encouragement throughout our academic journey.
+
+Special thanks to our families and friends for their unwavering support and understanding during the development of this project.
+
+\vspace{3cm}
+\begin{flushright}
+    \textbf{Sanjay - 22WU0104159} \\
+    \textbf{Nikunj - 22WU0104153} \\
+    \textbf{Vastav - 22WU0105033}
+\end{flushright}
+
+% Abstract
+\newpage
+\chapter*{ABSTRACT}
+\addcontentsline{toc}{chapter}{ABSTRACT}
+
+LeadMate is an AI-powered project management platform designed to streamline the process of team formation, technology stack selection, and task assignment for software development projects. The system leverages advanced AI agents powered by Large Language Models (LLMs) to analyze project documentation, team member resumes, and project requirements to provide intelligent recommendations.
+
+The core architecture of LeadMate is built around a multi-agent system that includes:
+\begin{itemize}
+    \item Document Agent: Analyzes project documentation and clarifies requirements through conversation
+    \item Stack Agent: Recommends technology stacks based on project requirements
+    \item Team Formation Agent: Forms optimal teams from resumes and skills
+    \item Task Agent: Generates actionable tasks from project requirements
+    \item CodeClarity Agent: Analyzes Git repositories to provide code quality insights and developer metrics
+\end{itemize}
+
+The system is built using modern technologies including FastAPI for the backend, React with TypeScript for the frontend, MongoDB for data storage, and ChromaDB for vector embeddings. The AI agents are implemented using CrewAI, a framework for orchestrating role-playing AI agents.
+
+LeadMate follows a project-centric architecture where all data is scoped to individual projects, ensuring data isolation and security. The system supports multi-tenancy with isolated storage for each company and project.
+
+This report presents the complete design, implementation, and evaluation of the LeadMate system, demonstrating its capabilities in automating key aspects of project management through AI-driven decision making. The system was implemented using the Llama3.2:3b model due to hardware limitations (8GB RAM), which affects performance compared to larger models but still provides valuable assistance in project management tasks.
+
+\vspace{1cm}
+\textbf{Keywords:} AI-Powered Project Management, Multi-Agent System, Large Language Models, Team Formation, Technology Stack Recommendation, Task Generation, Code Analysis, FastAPI, React, MongoDB, ChromaDB, CrewAI
+
+% Table of Contents
+\clearpage
+\tableofcontents
+\thispagestyle{fancy}
+
+% List of Figures
+\clearpage
+\listoffigures
+\thispagestyle{fancy}
+
+% List of Tables
+\clearpage
+\listoftables
+\thispagestyle{fancy}
+
+% Your content continues here...
+\chapter{INTRODUCTION}
+
+\section{Overview}
+
+In today's fast-paced software development landscape, project managers face numerous challenges in forming effective teams, selecting appropriate technology stacks, and allocating tasks efficiently. Traditional project management approaches often rely on manual processes and subjective decision-making, which can lead to suboptimal outcomes and project delays.
+
+The emergence of Artificial Intelligence (AI) and Large Language Models (LLMs) presents an opportunity to revolutionize project management by automating key decision-making processes. By leveraging AI to analyze project documentation, team member skills, and project requirements, organizations can make more informed decisions about team composition, technology selection, and task allocation.
+
+LeadMate addresses these challenges by providing an intelligent system that automates critical project management decisions through AI-powered agents. The system analyzes project requirements, team member capabilities, and historical data to provide data-driven recommendations that improve project outcomes. The system was implemented using the Llama3.2:3b model due to hardware limitations (8GB RAM), which affects performance compared to larger models but still provides valuable assistance in project management tasks.
+
+\end{document}

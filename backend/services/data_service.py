@@ -77,6 +77,39 @@ class DataService:
         except Exception as e:
             logger.error(f"Failed to save repository analysis: {str(e)}")
             return False
+
+    def save_analysis_files(self, repo_name: str, commits_df: pd.DataFrame, dev_stats_df: pd.DataFrame,
+                            base_dir: str = "data") -> bool:
+        """Save analysis results to CSV and Excel like management app.
+        - Writes commits.csv and developer_stats.csv
+        - Also writes analysis.xlsx with two sheets: commits, developer_stats
+        """
+        try:
+            export_dir = Path(base_dir) / repo_name
+            export_dir.mkdir(parents=True, exist_ok=True)
+
+            # CSV exports
+            commits_path = export_dir / "commits.csv"
+            dev_stats_path = export_dir / "developer_stats.csv"
+            if commits_df is not None:
+                (commits_df if not commits_df.empty else pd.DataFrame()).to_csv(commits_path, index=False)
+            if dev_stats_df is not None:
+                (dev_stats_df if not dev_stats_df.empty else pd.DataFrame()).to_csv(dev_stats_path)
+
+            # Excel export (best-effort)
+            try:
+                xlsx_path = export_dir / "analysis.xlsx"
+                with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:  # type: ignore
+                    (commits_df if commits_df is not None else pd.DataFrame()).to_excel(writer, sheet_name="commits", index=False)
+                    (dev_stats_df if dev_stats_df is not None else pd.DataFrame()).to_excel(writer, sheet_name="developer_stats")
+            except Exception as e:
+                logger.warning(f"Failed to write Excel export: {e}")
+
+            logger.info(f"Saved analysis files to {export_dir}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save analysis files: {e}")
+            return False
     
     def get_repository_analysis(self, company_id: str, lead_id: str, repo_name: str) -> Optional[Dict]:
         """Get repository analysis from database"""
