@@ -85,6 +85,33 @@ async def sync_documents(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/sync/project/{project_id}", response_model=SyncResponse)
+async def sync_project_documents(
+    project_id: str,
+    force_resync: bool = False,
+    current_user: User = Depends(get_current_user)
+):
+    """Convenience GET endpoint to sync a specific project's documents.
+    Useful for testing from the browser and avoids 405 when using GET."""
+    try:
+        company_id = current_user.startupId
+        lead_id = current_user.id
+        sync_result = await document_sync_service.sync_documents_to_chromadb(
+            startup_id=company_id,
+            lead_id=project_id,  # use project_id as context id
+            project_id=project_id,
+            force_resync=force_resync
+        )
+        return SyncResponse(
+            success=sync_result.get('success', False),
+            message=sync_result.get('message', 'Sync completed'),
+            startup_id=company_id,
+            sync_details=sync_result
+        )
+    except Exception as e:
+        logger.error(f"Error in project sync endpoint: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/sync/status", response_model=dict)
 async def get_sync_status(
     current_user: User = Depends(get_current_user)

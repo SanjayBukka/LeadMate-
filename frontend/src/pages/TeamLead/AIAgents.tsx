@@ -42,14 +42,6 @@ const agents: Agent[] = [
     endpoint: '/api/agents/stack/chat'
   },
   {
-    id: 'task',
-    name: 'Task Agent',
-    description: 'Generates and manages project tasks',
-    icon: <CheckSquare className="w-5 h-5" />,
-    color: 'bg-purple-500',
-    endpoint: '/api/agents/tasks/chat'
-  },
-  {
     id: 'team',
     name: 'Team Agent',
     description: 'Manages team members, roles, and team dynamics',

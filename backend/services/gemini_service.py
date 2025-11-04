@@ -33,10 +33,36 @@ class GeminiService:
     
     def __init__(self):
         """Initialize Gemini service with API key fallback logic"""
-        self.api_keys = [
-            "AIzaSyCl7ZBH5Vp2izkC5uNVArZ2arh_DEFF9Zs",
-            "AIzaSyAdsybf3VEN00pFqhOdhtKvIcrmGS7ksrE"
-        ]
+        # Load API keys with the following priority order:
+        # 1) GOOGLE_API_KEY env (primary for litellm/google)
+        # 2) GEMINI_API_KEY env (legacy)
+        # 3) GEMINI_API_KEYS env (comma-separated)
+        # 4) settings.GEMINI_API_KEYS (comma-separated)
+        # 5) settings.GEMINI_API_KEY_1 / settings.GEMINI_API_KEY_2
+        keys: list[str] = []
+        env_primary = os.getenv("GOOGLE_API_KEY", "").strip()
+        env_legacy = os.getenv("GEMINI_API_KEY", "").strip()
+        env_multi = os.getenv("GEMINI_API_KEYS", "").strip()
+        if env_primary:
+            keys.append(env_primary)
+        if env_legacy:
+            keys.append(env_legacy)
+        if env_multi:
+            keys.extend([k.strip() for k in env_multi.split(",") if k.strip()])
+        # Add keys from settings as fallbacks
+        settings_multi = getattr(settings, "GEMINI_API_KEYS", None)
+        if settings_multi:
+            keys.extend([k.strip() for k in str(settings_multi).split(",") if k.strip()])
+        if getattr(settings, "GEMINI_API_KEY_1", None):
+            keys.append(settings.GEMINI_API_KEY_1)
+        if getattr(settings, "GEMINI_API_KEY_2", None):
+            keys.append(settings.GEMINI_API_KEY_2)
+        # De-duplicate while preserving order
+        seen = set()
+        self.api_keys = [k for k in keys if not (k in seen or seen.add(k))]
+        if not self.api_keys:
+            logger.warning("No Gemini API keys found in environment or settings. Gemini may fail.")
+            self.api_keys = []
         self.current_api_key_index = 0
         self.llm_type = None  # 'gemini' or 'ollama'
         self._llm_instance = None
@@ -44,45 +70,45 @@ class GeminiService:
         self.ollama_model = "llama3.2:3b"
         self._initialize_llm()
     
+    def _try_key_and_set_model(self, api_key: str) -> bool:
+        """Configure Gemini with api_key, set a working model, and validate with a tiny request."""
+        if not GEMINI_AVAILABLE:
+            return False
+        try:
+            genai.configure(api_key=api_key)
+            # Choose an available model
+            try:
+                self.gemini_model = genai.GenerativeModel('gemini-2.5-flash')
+                self.gemini_model_name = 'gemini-2.5-flash'
+            except Exception:
+                try:
+                    self.gemini_model = genai.GenerativeModel('gemini-2.5-pro')
+                    self.gemini_model_name = 'gemini-2.5-pro'
+                except Exception:
+                    try:
+                        self.gemini_model = genai.GenerativeModel('gemini-flash-latest')
+                        self.gemini_model_name = 'gemini-flash-latest'
+                    except Exception:
+                        self.gemini_model = genai.GenerativeModel('gemini-pro-latest')
+                        self.gemini_model_name = 'gemini-pro-latest'
+            # Minimal validation
+            resp = self.gemini_model.generate_content("ping")
+            if resp and hasattr(resp, 'text'):
+                return True
+        except Exception as e:
+            logger.warning(f"Gemini key validation failed: {e}")
+        return False
+    
     def _initialize_llm(self):
         """Initialize LLM, trying Gemini first, then Ollama"""
         # Try Gemini first
-        if GEMINI_AVAILABLE:
+        if GEMINI_AVAILABLE and self.api_keys:
             for i, api_key in enumerate(self.api_keys):
-                try:
-                    genai.configure(api_key=api_key)
-                    # Try to get a Gemini model (use available models: gemini-2.5-flash or gemini-2.5-pro)
-                    try:
-                        self.gemini_model = genai.GenerativeModel('gemini-2.5-flash')
-                        self.gemini_model_name = 'gemini-2.5-flash'
-                    except:
-                        try:
-                            self.gemini_model = genai.GenerativeModel('gemini-2.5-pro')
-                            self.gemini_model_name = 'gemini-2.5-pro'
-                        except:
-                            try:
-                                self.gemini_model = genai.GenerativeModel('gemini-flash-latest')
-                                self.gemini_model_name = 'gemini-flash-latest'
-                            except:
-                                self.gemini_model = genai.GenerativeModel('gemini-pro-latest')
-                                self.gemini_model_name = 'gemini-pro-latest'
-                    
-                    # Create a test call to verify it works
-                    try:
-                        test_response = self.gemini_model.generate_content("test")
-                        # Check if response is valid
-                        if test_response and hasattr(test_response, 'text'):
-                            self.current_api_key_index = i
-                            self.llm_type = 'gemini'
-                            logger.info(f"✅ Gemini API initialized successfully with API key {i+1}")
-                            return
-                    except Exception as test_e:
-                        logger.warning(f"⚠️ Gemini API key {i+1} test failed: {test_e}")
-                        continue
-                    
-                except Exception as e:
-                    logger.warning(f"⚠️ Gemini API key {i+1} failed: {e}")
-                    continue
+                if self._try_key_and_set_model(api_key):
+                    self.current_api_key_index = i
+                    self.llm_type = 'gemini'
+                    logger.info(f"✅ Gemini API initialized successfully with API key {i+1}")
+                    return
         
         # Fallback to Ollama
         if OLLAMA_AVAILABLE:
@@ -116,16 +142,19 @@ class GeminiService:
             For direct use: LangChain LLM instance
         """
         # Try Gemini first
-        if self.llm_type == 'gemini' and GEMINI_AVAILABLE:
-            try:
-                # For CrewAI, return model name string (litellm format)
-                os.environ['GOOGLE_API_KEY'] = self.api_keys[self.current_api_key_index]
-                model_name = f"gemini/{self.gemini_model_name if hasattr(self, 'gemini_model_name') else 'gemini-2.5-flash'}"
-                logger.info(f"Using Gemini LLM: {model_name}")
-                return model_name
-            except Exception as e:
-                logger.error(f"Error with Gemini: {e}")
-                # Fall through to Ollama
+        if GEMINI_AVAILABLE and self.api_keys:
+            # Ensure the current key still works; if not, rotate through all
+            start_idx = self.current_api_key_index if 0 <= self.current_api_key_index < len(self.api_keys) else 0
+            indices = list(range(start_idx, len(self.api_keys))) + list(range(0, start_idx))
+            for i in indices:
+                if self._try_key_and_set_model(self.api_keys[i]):
+                    self.current_api_key_index = i
+                    os.environ['GOOGLE_API_KEY'] = self.api_keys[i]
+                    model_name = f"gemini/{self.gemini_model_name if hasattr(self, 'gemini_model_name') else 'gemini-2.5-flash'}"
+                    self.llm_type = 'gemini'
+                    logger.info(f"Using Gemini LLM with key {i+1}: {model_name}")
+                    return model_name
+            logger.warning("All Gemini keys failed at runtime; falling back to Ollama if available.")
         
         # Fallback to Ollama
         if OLLAMA_AVAILABLE:
@@ -152,24 +181,26 @@ class GeminiService:
             return self._llm_instance
         
         # Try Gemini first - use ChatGoogleGenerativeAI for LangChain
-        if self.llm_type == 'gemini' and GEMINI_AVAILABLE:
+        if GEMINI_AVAILABLE and self.api_keys:
             try:
-                os.environ['GOOGLE_API_KEY'] = self.api_keys[self.current_api_key_index]
-                try:
-                    from langchain_google_genai import ChatGoogleGenerativeAI
-                    model_name = self.gemini_model_name if hasattr(self, 'gemini_model_name') else 'gemini-2.5-flash'
-                    self._llm_instance = ChatGoogleGenerativeAI(
-                        model=model_name,
-                        temperature=0.7
-                    )
-                    logger.info(f"Using ChatGoogleGenerativeAI for Gemini: {model_name}")
-                    return self._llm_instance
-                except ImportError:
-                    # Fallback: use string model name with litellm
-                    model_name = self.gemini_model_name if hasattr(self, 'gemini_model_name') else 'gemini-2.5-flash'
-                    model_str = f"gemini/{model_name}"
-                    self._llm_instance = model_str
-                    return self._llm_instance
+                # Ensure we have a working key; rotate if necessary
+                model_str = self.get_llm()
+                # If get_llm() returns a gemini model string, we can try to build a LC instance
+                if model_str.startswith('gemini/'):
+                    os.environ['GOOGLE_API_KEY'] = self.api_keys[self.current_api_key_index]
+                    try:
+                        from langchain_google_genai import ChatGoogleGenerativeAI
+                        model_name = self.gemini_model_name if hasattr(self, 'gemini_model_name') else 'gemini-2.5-flash'
+                        self._llm_instance = ChatGoogleGenerativeAI(
+                            model=model_name,
+                            temperature=0.7
+                        )
+                        logger.info(f"Using ChatGoogleGenerativeAI for Gemini: {model_name}")
+                        return self._llm_instance
+                    except ImportError:
+                        # Fallback: use string model name with litellm
+                        self._llm_instance = model_str
+                        return self._llm_instance
             except Exception as e:
                 logger.error(f"Error creating Gemini LLM instance: {e}")
                 # Fall through to Ollama

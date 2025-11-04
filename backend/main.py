@@ -5,6 +5,20 @@ from typing import List, Optional
 import os
 import sys
 import logging
+from pathlib import Path
+try:
+    # Load environment variables from backend/.env if present
+    from dotenv import load_dotenv  # type: ignore
+    # Try local .env in the backend directory
+    env_path = Path(__file__).resolve().parent / ".env"
+    if env_path.exists():
+        load_dotenv(dotenv_path=str(env_path))
+    else:
+        # Fallback to default search (current working directory)
+        load_dotenv()
+except Exception:
+    # dotenv is optional; proceed if not installed
+    pass
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -30,6 +44,7 @@ from routers.notifications_ws import router as notifications_ws_router
 from routers.team_formation import router as team_formation_router
 from routers.mongodb_agents import router as mongodb_agents_router # NEW MongoDB Agents
 from routers.document_sync import router as document_sync_router  # Document sync endpoints
+from routers.project_agents import router as project_agents_router  # Project-centric agents
 
 app = FastAPI(title="LeadMate API", version="1.0.0")
 
@@ -50,6 +65,10 @@ async def shutdown_db_client():
     """Close MongoDB connection on shutdown"""
     await close_mongodb_connection()
     logger.info("✅ LeadMate API Shutdown Complete")
+
+# Add error handler middleware (must be first)
+from middleware.error_handler import error_handler_middleware
+app.middleware("http")(error_handler_middleware)
 
 # Add CORS middleware
 app.add_middleware(
@@ -77,6 +96,7 @@ app.include_router(notifications_ws_router)  # WebSocket - Real-time Notificatio
 app.include_router(team_formation_router)  # Team Formation - CrewAI Orchestration
 app.include_router(mongodb_agents_router)  # MongoDB Agents - New Vector Search System # NEW
 app.include_router(document_sync_router)  # Document sync endpoints
+app.include_router(project_agents_router)  # Project-centric agents (NEW)
 app.include_router(documents.router)
 app.include_router(team.router)
 app.include_router(stack.router)

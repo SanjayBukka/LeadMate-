@@ -21,6 +21,58 @@ class GitService:
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(exist_ok=True)
         
+    def analyze_local_directory(self, path: str) -> Dict:
+        """Analyze a local directory as a repository fallback.
+        Returns a lightweight summary similar to remote repo analysis pieces.
+        """
+        try:
+            from collections import Counter
+            file_types: Dict[str, int] = {}
+            key_files: Dict[str, str] = {}
+            dependencies: List[str] = []
+
+            counter = Counter()
+            for root, dirs, files in os.walk(path):
+                # Skip heavy/system directories
+                dirs[:] = [d for d in dirs if d not in [
+                    ".git", "node_modules", "venv", ".venv", "__pycache__"
+                ]]
+                for fname in files:
+                    ext = os.path.splitext(fname)[1].lower()
+                    counter[ext] += 1
+                    if fname in (
+                        "requirements.txt", "pyproject.toml", "setup.py",
+                        "repo_analyzer.py", "data_manager.py", "utils.py",
+                        "ollama_client.py", "streamlit_app.py"
+                    ):
+                        fpath = os.path.join(root, fname)
+                        try:
+                            with open(fpath, "r", encoding="utf-8", errors="ignore") as fh:
+                                content = fh.read(2000)
+                            key_files[fname] = content
+                            if fname == "requirements.txt":
+                                dependencies = [
+                                    ln.strip() for ln in content.splitlines()
+                                    if ln.strip() and not ln.strip().startswith("#")
+                                ]
+                        except Exception:
+                            # best-effort for preview, ignore read errors
+                            pass
+
+            file_types = dict(counter)
+            return {
+                "file_analysis": file_types,
+                "key_files": key_files,
+                "dependencies": dependencies,
+            }
+        except Exception as e:
+            logger.error(f"Failed to analyze local directory '{path}': {e}")
+            return {
+                "file_analysis": {},
+                "key_files": {},
+                "dependencies": [],
+            }
+
     def clone_repository(self, repo_url: str, repo_name: str, company_id: str, lead_id: str) -> Tuple[bool, str]:
         """Clone repository to local storage"""
         try:

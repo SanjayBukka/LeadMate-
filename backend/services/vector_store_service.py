@@ -22,7 +22,11 @@ class VectorStoreService:
     
     def get_collection_name(self, startup_id: str, project_id: str, collection_type: str = "documents") -> str:
         """
-        Generate isolated collection name
+        Generate isolated collection name that complies with ChromaDB naming rules:
+        - 3-63 characters
+        - Starts and ends with alphanumeric
+        - Only alphanumeric, underscores, or hyphens
+        - No consecutive periods
         
         Args:
             startup_id: Startup identifier
@@ -30,9 +34,84 @@ class VectorStoreService:
             collection_type: Type of collection (documents, chat_history, etc.)
         
         Returns:
-            Collection name string
+            Collection name string (sanitized and length-limited)
         """
-        return f"startup_{startup_id}_project_{project_id}_{collection_type}"
+        import re
+        import hashlib
+        
+        # Sanitize IDs to ensure valid characters only
+        safe_startup = re.sub(r'[^a-zA-Z0-9_-]', '_', str(startup_id))
+        safe_project = re.sub(r'[^a-zA-Z0-9_-]', '_', str(project_id))
+        safe_type = re.sub(r'[^a-zA-Z0-9_-]', '_', str(collection_type))
+        
+        # Ensure starts and ends with alphanumeric (remove leading/trailing non-alphanumeric)
+        safe_startup = re.sub(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$', '', safe_startup)
+        safe_project = re.sub(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$', '', safe_project)
+        safe_type = re.sub(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$', '', safe_type)
+        
+        # Base template: "startup_{id}_project_{id}_{type}"
+        # This is about 29 chars (startup_ + _project_ + _documents)
+        base_length = len("startup_") + len("_project_") + len(f"_{safe_type}")
+        
+        # ChromaDB limit is 63 characters
+        max_length = 63
+        available_chars = max_length - base_length  # ~34 chars for IDs
+        
+        # If IDs are too long, use hash-based approach
+        if len(safe_startup) + len(safe_project) > available_chars:
+            # Generate hash from both IDs for uniqueness
+            hash_input = f"{startup_id}_{project_id}_{collection_type}"
+            hash_full = hashlib.md5(hash_input.encode()).hexdigest()
+            
+            # Use shortened prefix with hash
+            # Format: "s_{hash1}_p_{hash2}_{type}" to stay under 63 chars
+            hash1 = hash_full[:8]
+            hash2 = hash_full[8:16]
+            type_part = safe_type[:15]
+            collection_name = f"s_{hash1}_p_{hash2}_{type_part}"
+            
+            # Final length check and truncation
+            if len(collection_name) > max_length:
+                # More aggressive truncation
+                hash_simple = hash_full[:12]
+                type_short = safe_type[:10]
+                collection_name = f"s_{hash_simple}_{type_short}"
+                collection_name = collection_name[:max_length]
+        else:
+            # IDs fit, use normal format
+            collection_name = f"startup_{safe_startup}_project_{safe_project}_{safe_type}"
+            
+            # Final truncation if still too long
+            if len(collection_name) > max_length:
+                # Truncate IDs proportionally
+                excess = len(collection_name) - max_length
+                startup_share = len(safe_startup) / (len(safe_startup) + len(safe_project))
+                startup_reduce = int(excess * startup_share)
+                project_reduce = excess - startup_reduce
+                
+                safe_startup = safe_startup[:max(1, len(safe_startup) - startup_reduce)]
+                safe_project = safe_project[:max(1, len(safe_project) - project_reduce)]
+                collection_name = f"startup_{safe_startup}_project_{safe_project}_{safe_type}"
+                collection_name = collection_name[:max_length]
+        
+        # Ensure starts and ends with alphanumeric (final check)
+        collection_name = re.sub(r'^[^a-zA-Z0-9]+', '', collection_name)
+        collection_name = re.sub(r'[^a-zA-Z0-9]+$', '', collection_name)
+        
+        # Fallback: if somehow still invalid, use hash-only approach
+        if len(collection_name) < 3 or len(collection_name) > max_length:
+            hash_fallback = hashlib.md5(f"{startup_id}_{project_id}_{collection_type}".encode()).hexdigest()[:16]
+            collection_name = f"col_{hash_fallback}_{safe_type[:8]}"
+            collection_name = collection_name[:max_length]
+        
+        # Final validation: ensure 3-63 chars and alphanumeric start/end
+        if not (3 <= len(collection_name) <= max_length and 
+                collection_name[0].isalnum() and collection_name[-1].isalnum()):
+            # Last resort: simple hash-based name
+            hash_simple = hashlib.md5(f"{startup_id}_{project_id}_{collection_type}".encode()).hexdigest()[:12]
+            collection_name = f"c{hash_simple}"
+        
+        return collection_name
     
     def get_client(self, startup_id: str) -> chromadb.PersistentClient:
         """

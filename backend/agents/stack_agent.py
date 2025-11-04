@@ -12,6 +12,8 @@ from crewai import Agent, Task, Crew, Process
 import PyPDF2
 import io
 from services.gemini_service import gemini_service
+from services.vector_store_service import vector_store_service
+from langchain_community.llms import Ollama
 import logging
 
 logger = logging.getLogger(__name__)
@@ -63,13 +65,39 @@ class StackAgent:
             metadata={"description": "Team formation iterations with lead"}
         )
         
-        # Initialize LLM (Gemini with Ollama fallback)
+        # Initialize LLM (prefer Ollama, fallback to Gemini if explicitly enabled)
+        self.llm = None
+        self.crewai_llm = None
+        force_ollama = os.getenv("FORCE_OLLAMA", "").lower() in ("1", "true", "yes")
+        use_gemini = os.getenv("USE_GEMINI", "").lower() in ("1", "true", "yes")
+        google_key = os.getenv("GOOGLE_API_KEY", "").strip()
+        ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+        ollama_base = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
         try:
-            self.llm = gemini_service.get_llm()
-            logger.info(f"✅ LLM initialized: {gemini_service.llm_type} ({gemini_service.model})")
+            if force_ollama or not (use_gemini and google_key):
+                self.crewai_llm = f"ollama/{ollama_model}"
+                try:
+                    self.llm = Ollama(model=ollama_model, base_url=ollama_base)
+                except Exception:
+                    self.llm = None
+                logger.info(f"Using Ollama for StackAgent: model={ollama_model} base={ollama_base}")
+            else:
+                try:
+                    self.llm = gemini_service.get_llm()
+                    self.crewai_llm = getattr(gemini_service, "crewai_model", None)
+                    logger.info(f"Using Gemini for StackAgent: {gemini_service.llm_type} ({gemini_service.model})")
+                except Exception as ge:
+                    logger.warning(f"Gemini init failed for StackAgent ({ge}), falling back to Ollama")
+                    self.crewai_llm = f"ollama/{ollama_model}"
+                    try:
+                        self.llm = Ollama(model=ollama_model, base_url=ollama_base)
+                    except Exception:
+                        self.llm = None
         except Exception as e:
             self.llm = None
-            logger.error(f"⚠️ LLM initialization failed: {e}. Using fallback logic.")
+            self.crewai_llm = None
+            logger.error(f"LLM initialization failed for StackAgent: {e}")
         
         # Create CrewAI agent
         self.agent = self._create_agent()
@@ -80,7 +108,8 @@ class StackAgent:
     
     def _create_agent(self):
         """Create Team Formation Agent with CrewAI"""
-        if not self.llm:
+        llm_for_crewai = self.crewai_llm if self.crewai_llm else self.llm
+        if not llm_for_crewai:
             return None
             
         return Agent(
@@ -95,7 +124,7 @@ class StackAgent:
                         project success criteria.''',
             verbose=True,
             allow_delegation=False,
-            llm=self.llm
+            llm=llm_for_crewai
         )
     
     def upload_resume(self, file_data: bytes, filename: str, candidate_name: str) -> Dict:
@@ -471,18 +500,37 @@ class StackAgent:
     def chat_with_agent(self, message: str) -> dict:
         """Simple chat interface for the frontend"""
         try:
-            # Get chat history for context
+            # Get document context (from VectorStore/Chroma) and recent chat history
+            doc_context = self._get_document_context()
             chat_history = self._get_chat_history()
-            
-            # Create a more dynamic response based on the message
-            if "tech stack" in message.lower() or "technology" in message.lower():
-                response = f"I can help you choose the right technology stack for your project. Based on your requirements, I can recommend:\n\n• **Frontend**: React, Vue.js, or Angular for web apps\n• **Backend**: Node.js, Python (Django/FastAPI), or Java (Spring)\n• **Database**: PostgreSQL, MongoDB, or MySQL\n• **Cloud**: AWS, Azure, or Google Cloud\n\nWhat type of application are you building? (web, mobile, desktop, API, etc.)"
-            elif "team" in message.lower() or "developer" in message.lower():
-                response = f"I can help you form the right development team. For a typical project, you might need:\n\n• **Frontend Developer** - UI/UX implementation\n• **Backend Developer** - Server-side logic and APIs\n• **Full-stack Developer** - Both frontend and backend\n• **DevOps Engineer** - Deployment and infrastructure\n• **QA Engineer** - Testing and quality assurance\n\nWhat's the scope and complexity of your project?"
-            elif "recommend" in message.lower() or "suggest" in message.lower():
-                response = f"I'd be happy to provide specific recommendations! To give you the best tech stack advice, I need to understand:\n\n• What type of application you're building\n• Your team's technical expertise\n• Performance and scalability requirements\n• Budget and timeline constraints\n• Integration needs with existing systems\n\nCould you share more details about your project?"
+
+            # If we have an LLM agent, generate a contextual response using CrewAI
+            if self.agent:
+                task = Task(
+                    description=(
+                        f"You are assisting a team lead with technology stack and team formation.\n\n"
+                        f"PROJECT DOCUMENT CONTEXT (summaries/snippets):\n{doc_context}\n\n"
+                        f"RECENT CONVERSATION (if any):\n{chat_history}\n\n"
+                        f"LEAD'S QUESTION: {message}\n\n"
+                        "Provide a specific, actionable response grounded in the project context.\n"
+                        "If requirements are ambiguous, ask 2-3 targeted clarifying questions."
+                    ),
+                    expected_output="A concise, contextual answer that references the project where relevant.",
+                    agent=self.agent
+                )
+                crew = Crew(agents=[self.agent], tasks=[task], process=Process.sequential, verbose=False)
+                response = str(crew.kickoff())
             else:
-                response = f"I'm the Stack Agent, specialized in technology stack decisions and team formation. I can help you with:\n\n🔧 **Technology Recommendations**: Choose the right tools and frameworks\n👥 **Team Formation**: Determine roles and skill requirements\n📊 **Architecture Planning**: Design scalable system architecture\n⚡ **Performance Optimization**: Select technologies for speed and efficiency\n\nWhat specific aspect of your tech stack would you like to discuss?"
+                # Fallback: compose a contextual message from available context
+                base = (
+                    "I'm the Stack Agent. Here's what I gather from your project documents, and how I can help next:\n\n"
+                )
+                ctx = doc_context if doc_context and doc_context != "No documents found" else "(no document context available)"
+                response = (
+                    f"{base}Document context: {ctx[:600]}...\n\n"
+                    f"Your question: {message}\n\n"
+                    "I can recommend frontend/backend, database, cloud, and propose team roles based on the above."
+                )
             
             return {
                 "response": response,
@@ -497,16 +545,30 @@ class StackAgent:
             }
     
     def _get_document_context(self) -> str:
-        """Get document context from Document Agent collection"""
-        if not self.docs_collection:
-            return "No documents available"
-        
+        """Get document context prioritizing shared VectorStore (project-based)."""
+        # VectorStore (startup_id=company_id, project_id=lead_id)
         try:
+            collection = vector_store_service.get_or_create_collection(
+                startup_id=self.company_id,
+                project_id=self.lead_id,
+                collection_type="documents"
+            )
+            res = collection.get()
+            docs = res.get('documents') or []
+            if docs:
+                return "\n\n".join(docs[:5])
+        except Exception:
+            pass
+
+        # Fallback: local Chroma mirror if present
+        try:
+            if not self.docs_collection:
+                return "No documents available"
             docs = self.docs_collection.get()
-            if docs['documents']:
-                return "\n\n".join(docs['documents'][:5])  # First 5 chunks
+            if docs.get('documents'):
+                return "\n\n".join(docs['documents'][:5])
             return "No documents found"
-        except:
+        except Exception:
             return "Error retrieving documents"
     
     def _get_chat_history(self) -> str:

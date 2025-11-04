@@ -5,7 +5,6 @@ import {
   Kanban,
   Users,
   Bot,
-  Workflow,
   FileBarChart,
   Sparkles
 } from 'lucide-react';
@@ -33,14 +32,9 @@ const sidebarItems = [
     highlight: true
   },
   {
-    to: '/lead/workflow',
-    icon: Workflow,
-    label: 'Workflow'
-  },
-  {
-    to: '/lead/reports',
+    to: '/lead/management',
     icon: FileBarChart,
-    label: 'Progress Reports'
+    label: 'Management'
   }
 ];
 

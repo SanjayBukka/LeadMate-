@@ -2,12 +2,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
 from datetime import datetime
 from bson import ObjectId
+import logging
 
 from database import get_database
 from models.project import ProjectCreate, Project, ProjectInDB, ProjectUpdate
 from models.notification import NotificationInDB
 from models.user import User
 from utils.auth import get_current_user, get_current_manager
+from services.project_data_service import project_data_service
+from utils.validation import validate_project_title
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/projects", tags=["Projects"])
 
@@ -17,6 +22,9 @@ async def create_project(
     current_user: User = Depends(get_current_manager)
 ):
     """Manager creates a new project"""
+    # Validate project title
+    validate_project_title(project_data.title)
+    
     db = get_database()
     
     # Validate team lead if provided
@@ -283,6 +291,20 @@ async def delete_project(
             detail="Project not found"
         )
     
+    # IMPORTANT: Clean up all project data before deleting project
+    from services.project_cleanup_service import project_cleanup_service
+    
+    try:
+        cleanup_results = await project_cleanup_service.cleanup_project(
+            project_id, 
+            current_user.startupId
+        )
+        logger.info(f"Project cleanup completed: {cleanup_results}")
+    except Exception as e:
+        logger.error(f"Error during project cleanup: {e}")
+        # Still delete project, but log the error
+        # In production, you might want to handle this differently
+    
     # Delete project
     await db.projects.delete_one({"_id": ObjectId(project_id)})
     
@@ -293,4 +315,69 @@ async def delete_project(
     )
     
     return {"message": "Project deleted successfully"}
+
+
+@router.get("/{project_id}/summary")
+async def get_project_summary(
+    project_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get comprehensive summary of project data"""
+    db = get_database()
+    
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid project ID format"
+        )
+    
+    # Verify project access
+    project = await db.projects.find_one({
+        "_id": ObjectId(project_id),
+        "startupId": current_user.startupId
+    })
+    
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    
+    # Get detailed summary from project_data_service
+    try:
+        summary = await project_data_service.get_project_data_summary(project_id)
+        
+        # Add project metadata
+        summary["project"] = {
+            "id": str(project["_id"]),
+            "title": project.get("title"),
+            "description": project.get("description"),
+            "status": project.get("status"),
+            "progress": project.get("progress", 0),
+            "createdAt": project.get("createdAt").isoformat() if project.get("createdAt") else None
+        }
+        
+        # Get task breakdown
+        tasks = await db.tasks.find({"projectId": project_id}).to_list(None)
+        summary["tasks"] = {
+            "total": len(tasks),
+            "by_status": {
+                "pending": len([t for t in tasks if t.get("status") == "pending"]),
+                "in_progress": len([t for t in tasks if t.get("status") == "in_progress"]),
+                "completed": len([t for t in tasks if t.get("status") == "completed"])
+            },
+            "by_priority": {
+                "high": len([t for t in tasks if t.get("priority") == "high"]),
+                "medium": len([t for t in tasks if t.get("priority") == "medium"]),
+                "low": len([t for t in tasks if t.get("priority") == "low"])
+            }
+        }
+        
+        return summary
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error generating project summary: {str(e)}"
+        )
 

@@ -10,6 +10,8 @@ from pathlib import Path
 import chromadb
 from crewai import Agent, Task, Crew, Process
 from services.gemini_service import gemini_service
+from services.vector_store_service import vector_store_service
+from langchain_community.llms import Ollama
 import logging
 
 logger = logging.getLogger(__name__)
@@ -57,20 +59,47 @@ class TaskAgent:
             metadata={"description": "Project tasks generated from requirements"}
         )
         
-        # Initialize LLM (Gemini with Ollama fallback)
+        # Initialize LLM (prefer Ollama; Gemini only if explicitly enabled)
+        self.llm = None
+        self.crewai_llm = None
+        force_ollama = os.getenv("FORCE_OLLAMA", "").lower() in ("1", "true", "yes")
+        use_gemini = os.getenv("USE_GEMINI", "").lower() in ("1", "true", "yes")
+        google_key = os.getenv("GOOGLE_API_KEY", "").strip()
+        ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+        ollama_base = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
         try:
-            self.llm = gemini_service.get_llm()
-            logger.info(f"✅ LLM initialized: {gemini_service.llm_type} ({gemini_service.model})")
+            if force_ollama or not (use_gemini and google_key):
+                self.crewai_llm = f"ollama/{ollama_model}"
+                try:
+                    self.llm = Ollama(model=ollama_model, base_url=ollama_base)
+                except Exception:
+                    self.llm = None
+                logger.info(f"Using Ollama for TaskAgent: model={ollama_model} base={ollama_base}")
+            else:
+                try:
+                    self.llm = gemini_service.get_llm()
+                    self.crewai_llm = getattr(gemini_service, "crewai_model", None)
+                    logger.info(f"Using Gemini for TaskAgent: {gemini_service.llm_type} ({gemini_service.model})")
+                except Exception as ge:
+                    logger.warning(f"Gemini init failed for TaskAgent ({ge}), falling back to Ollama")
+                    self.crewai_llm = f"ollama/{ollama_model}"
+                    try:
+                        self.llm = Ollama(model=ollama_model, base_url=ollama_base)
+                    except Exception:
+                        self.llm = None
         except Exception as e:
             self.llm = None
-            logger.error(f"⚠️ LLM initialization failed: {e}. Using fallback logic.")
+            self.crewai_llm = None
+            logger.error(f"LLM initialization failed for TaskAgent: {e}")
         
         # Create CrewAI agent
         self.agent = self._create_agent()
     
     def _create_agent(self):
         """Create Task Generation Agent with CrewAI"""
-        if not self.llm:
+        llm_for_crewai = self.crewai_llm if self.crewai_llm else self.llm
+        if not llm_for_crewai:
             return None
             
         return Agent(
@@ -93,7 +122,7 @@ class TaskAgent:
                         balance workload across team members.''',
             verbose=True,
             allow_delegation=False,
-            llm=self.llm
+            llm=llm_for_crewai
         )
     
     def generate_tasks(self, project_name: str = "Project") -> Dict:
@@ -108,8 +137,9 @@ class TaskAgent:
             project_context = self._get_project_context()
             team_info = self._get_team_info()
             
+            # Proceed even if team is not formed yet
             if not team_info:
-                return {"success": False, "error": "No team formed yet. Run Stack Agent first."}
+                team_info = "No team formed yet. Assign 'Unassigned' where needed."
             
             # Generate tasks using CrewAI
             if self.agent:
@@ -135,7 +165,7 @@ class TaskAgent:
                                    For each task, provide:
                                    - **Title**: Clear, action-oriented (e.g., "Implement user authentication")
                                    - **Description**: Detailed requirements and acceptance criteria
-                                   - **Assignee**: Team member name (match from team list)
+                                   - **Assignee**: Team member name (match from team list). If team not formed, set to "Unassigned".
                                    - **Priority**: high/medium/low (based on criticality)
                                    - **Estimated Days**: 1-5 days
                                    - **Dependencies**: Tasks that must be completed first
@@ -377,26 +407,29 @@ class TaskAgent:
         """Get project context from Document Agent (INITIAL SOURCE)"""
         context_parts = []
         
-        # Get documents (INITIAL SOURCE)
-        if self.docs_collection:
-            try:
-                docs = self.docs_collection.get()
-                if docs['documents']:
-                    context_parts.append("UPLOADED PROJECT DOCUMENTS (INITIAL SOURCE):")
-                    context_parts.append("\n\n".join(docs['documents'][:10]))
-                else:
-                    context_parts.append("No project documents available - please upload project requirements first")
-            except:
-                context_parts.append("No project documents available - please upload project requirements first")
+        # VectorStore Documents
+        try:
+            doc_col = vector_store_service.get_or_create_collection(
+                startup_id=self.company_id,
+                project_id=self.lead_id,
+                collection_type="documents"
+            )
+            res = doc_col.get()
+            docs = res.get('documents') or []
+            if docs:
+                context_parts.append("UPLOADED PROJECT DOCUMENTS (INITIAL SOURCE):")
+                context_parts.append("\n\n".join(docs[:10]))
+        except Exception:
+            pass
         
-        # Get chat history (CONTINUING SOURCE)
+        # Conversation history (CONTINUING SOURCE)
         if self.doc_chat_collection:
             try:
                 chats = self.doc_chat_collection.get()
-                if chats['documents']:
+                if chats.get('documents'):
                     context_parts.append("\n\nCONVERSATION HISTORY (CONTINUING SOURCE):")
                     context_parts.append("\n\n".join(chats['documents'][:5]))
-            except:
+            except Exception:
                 pass
         
         return "\n\n".join(context_parts) if context_parts else "No project context available"

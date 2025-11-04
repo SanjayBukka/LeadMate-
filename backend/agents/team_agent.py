@@ -10,6 +10,8 @@ from pathlib import Path
 import chromadb
 from crewai import Agent, Task, Crew, Process
 from services.gemini_service import gemini_service
+from services.vector_store_service import vector_store_service
+from langchain_community.llms import Ollama
 import logging
 
 logger = logging.getLogger(__name__)
@@ -46,22 +48,49 @@ class TeamAgent:
             metadata={"description": "Lead conversation with Team Agent"}
         )
         
-        # Initialize LLM (Gemini with Ollama fallback)
+        # Initialize LLM (prefer Ollama, fallback to Gemini if explicitly enabled)
+        self.llm = None
+        self.crewai_llm = None
+        force_ollama = os.getenv("FORCE_OLLAMA", "").lower() in ("1", "true", "yes")
+        use_gemini = os.getenv("USE_GEMINI", "").lower() in ("1", "true", "yes")
+        google_key = os.getenv("GOOGLE_API_KEY", "").strip()
+        ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+        ollama_base = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
         try:
-            self.llm = gemini_service.get_llm()
-            logger.info(f"✅ LLM initialized: {gemini_service.llm_type} ({gemini_service.model})")
+            if force_ollama or not (use_gemini and google_key):
+                self.crewai_llm = f"ollama/{ollama_model}"
+                try:
+                    self.llm = Ollama(model=ollama_model, base_url=ollama_base)
+                except Exception:
+                    self.llm = None
+                logger.info(f"Using Ollama for TeamAgent: model={ollama_model} base={ollama_base}")
+            else:
+                try:
+                    self.llm = gemini_service.get_llm()
+                    self.crewai_llm = getattr(gemini_service, "crewai_model", None)
+                    logger.info(f"Using Gemini for TeamAgent: {gemini_service.llm_type} ({gemini_service.model})")
+                except Exception as ge:
+                    logger.warning(f"Gemini init failed for TeamAgent ({ge}), falling back to Ollama")
+                    self.crewai_llm = f"ollama/{ollama_model}"
+                    try:
+                        self.llm = Ollama(model=ollama_model, base_url=ollama_base)
+                    except Exception:
+                        self.llm = None
         except Exception as e:
-            logger.error(f"⚠️ LLM initialization failed: {e}")
+            logger.error(f"LLM initialization failed for TeamAgent: {e}")
             self.llm = None
+            self.crewai_llm = None
         
         # Create CrewAI agent
+        llm_for_crewai = self.crewai_llm if self.crewai_llm else self.llm
         self.agent = Agent(
             role="Team Management Expert",
             goal="Help with team building, role assignments, and team dynamics optimization",
             backstory="""You are an expert team manager with extensive experience in building high-performing teams. 
             You excel at analyzing team dynamics, assigning roles, and optimizing team performance. 
             You understand the importance of diverse skills, clear communication, and effective collaboration.""",
-            llm=self.llm,
+            llm=llm_for_crewai,
             verbose=True,
             allow_delegation=False
         )
@@ -205,9 +234,48 @@ Would you like to upload some documents now, or do you have any general question
                 chat_id = self._store_chat(message, response)
                 return response, chat_id
             
-            # Search for relevant document context (INITIAL SOURCE)
-            context_docs = await self.search_documents(message, n_results=5)
-            context = "\n\n".join(context_docs) if context_docs else "No relevant documents found."
+            # Build contextual inputs from VectorStore (documents + resumes)
+            try:
+                doc_collection = vector_store_service.get_or_create_collection(
+                    startup_id=self.company_id,
+                    project_id=self.lead_id,
+                    collection_type="documents"
+                )
+                dc = doc_collection.get()
+                doc_snippets = (dc.get('documents') or [])[:5]
+                doc_ctx = "\n\n".join(doc_snippets) if doc_snippets else "No documents found"
+            except Exception:
+                doc_ctx = "No documents found"
+
+            # Build resumes context including candidate names and a short snippet
+            candidate_list = []
+            try:
+                resumes_collection = vector_store_service.get_or_create_collection(
+                    startup_id=self.company_id,
+                    project_id=self.lead_id,
+                    collection_type="resumes"
+                )
+                rc = resumes_collection.get()
+                resume_docs = rc.get('documents') or []
+                resume_metas = rc.get('metadatas') or []
+                preview_lines = []
+                for i, doc in enumerate(resume_docs[:3]):
+                    meta = resume_metas[i] if i < len(resume_metas) else {}
+                    name = meta.get('candidate_name', 'Unknown')
+                    candidate_list.append(name)
+                    preview = (doc or '')[:300]
+                    preview_lines.append(f"- {name}: {preview}")
+                resumes_ctx = "\n".join(preview_lines) if preview_lines else "No resumes found"
+            except Exception:
+                resumes_ctx = "No resumes found"
+                candidate_list = []
+
+            candidates_str = ", ".join(candidate_list) if candidate_list else "(none)"
+            context = (
+                f"PROJECT DOCUMENTS:\n{doc_ctx}\n\n"
+                f"UPLOADED RESUMES (previews):\n{resumes_ctx}\n\n"
+                f"CANDIDATES (names): {candidates_str}"
+            )
             
             # Get chat history for context (CONTINUING SOURCE)
             chat_history = self.get_chat_history()
@@ -219,16 +287,15 @@ Would you like to upload some documents now, or do you have any general question
             # Create task for agent with document context
             if self.agent:
                 task = Task(
-                    description=f'''Based on the uploaded project documentation and conversation history, 
-                    provide expert team management advice for the following question: "{message}"
-
-                    **UPLOADED PROJECT DOCUMENTS (INITIAL SOURCE):**
-                    {context}
-
-                    **CONVERSATION HISTORY (CONTINUING SOURCE):**
-                    {history_text}
-
-                    Please provide detailed, actionable team management advice based on the project requirements and context provided.''',
+                    description=(
+                        f"Use the project documents and uploaded resumes to recommend team structure and roles.\n\n"
+                        f"{context}\n\nCONVERSATION HISTORY:\n{history_text}\n\nLEAD'S MESSAGE: {message}\n\n"
+                        "Provide: (1) role assignments mapping each role to a specific candidate name from CANDIDATES;"
+                        " if no suitable candidate exists, explicitly state 'Hiring Required' or 'Training Required' and the skill gap."
+                        " (2) a short skill-match rationale per assignment; (3) key risks & mitigations;"
+                        " (4) 2-3 clarifying questions if needed. Return a concise, scannable plan."
+                    ),
+                    expected_output='A concise team plan with role->candidate mapping (or Hiring/Training Required), rationale, risks/mitigations, and clarifying questions.',
                     agent=self.agent
                 )
                 

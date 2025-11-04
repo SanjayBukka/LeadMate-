@@ -73,6 +73,33 @@ async def create_indexes():
         await database.notifications.create_index([("userId", 1), ("isRead", 1)])
         await database.notifications.create_index([("userId", 1), ("createdAt", -1)])
         
+        # Documents collection indexes (project-centric)
+        await database.documents.create_index("projectId")
+        await database.documents.create_index("startupId")
+        await database.documents.create_index([("projectId", 1), ("uploadedAt", -1)])
+        await database.documents.create_index([("startupId", 1), ("projectId", 1)])
+        
+        # Team members collection indexes (project-centric)
+        await database.team_members.create_index("projectId")
+        await database.team_members.create_index("startupId")
+        await database.team_members.create_index([("projectId", 1), ("createdAt", -1)])
+        
+        # Tasks collection indexes (project-centric)
+        await database.tasks.create_index("projectId")
+        await database.tasks.create_index("startupId")
+        await database.tasks.create_index([("projectId", 1), ("status", 1)])
+        await database.tasks.create_index([("projectId", 1), ("priority", 1), ("createdAt", -1)])
+        
+        # Tech stacks collection indexes (project-centric)
+        await database.tech_stacks.create_index("projectId", unique=True)  # One stack per project
+        await database.tech_stacks.create_index("startupId")
+        await database.tech_stacks.create_index([("projectId", 1), ("createdAt", -1)])
+        
+        # Team formations collection indexes (project-centric)
+        await database.team_formations.create_index("projectId")
+        await database.team_formations.create_index("startupId")
+        await database.team_formations.create_index([("projectId", 1), ("createdAt", -1)])
+        
         logger.info("✅ Database indexes created successfully")
         
     except Exception as e:

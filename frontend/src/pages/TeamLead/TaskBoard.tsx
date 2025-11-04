@@ -3,6 +3,7 @@ import { Navbar } from '../../components/Navbar';
 import { Sidebar } from '../../components/Sidebar';
 import { TaskCard } from '../../components/TaskCard';
 import { useAuth } from '../../contexts/AuthContext';
+import { FolderOpen } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -22,9 +23,29 @@ export function TaskBoard() {
   const [projectComplete, setProjectComplete] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
 
-  // Use user ID for both company and lead (can be enhanced later)
-  const companyId = user?.id || 'demo_company';
-  const leadId = user?.id || 'demo_lead';
+  // Use startupId for company and projectId (selected) for lead context
+  const companyId = user?.startupId || 'demo_company';
+  const [projects, setProjects] = useState<any[]>([]);
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const leadId = selectedProject || 'demo_project';
+
+  const loadProjects = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${API_BASE_URL}/api/projects`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setProjects(data);
+        if (data.length > 0 && !selectedProject) {
+          setSelectedProject(data[0]._id);
+        }
+      }
+    } catch (e) {
+      console.error('Error loading projects:', e);
+    }
+  };
 
   // Fetch tasks from backend
   const fetchTasks = async () => {
@@ -106,8 +127,14 @@ export function TaskBoard() {
 
   // Load tasks on mount
   useEffect(() => {
-    fetchTasks();
-    fetchStats();
+    loadProjects();
+  }, []);
+
+  useEffect(() => {
+    if (companyId && leadId) {
+      fetchTasks();
+      fetchStats();
+    }
   }, [companyId, leadId]);
 
   // Check completion when tasks change
@@ -171,7 +198,7 @@ export function TaskBoard() {
         
         <main className="flex-1 p-8">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
+              <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -181,6 +208,20 @@ export function TaskBoard() {
                     Manage tasks with drag-and-drop functionality
                   </p>
                 </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                      <select
+                        value={selectedProject || ''}
+                        onChange={(e) => setSelectedProject(e.target.value || null)}
+                        className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select Project</option>
+                        {projects.map(p => (
+                          <option key={p._id} value={p._id}>{p.title}</option>
+                        ))}
+                      </select>
+                    </div>
                 <button
                   onClick={generateTasks}
                   disabled={generating}
@@ -198,6 +239,7 @@ export function TaskBoard() {
                     </>
                   )}
                 </button>
+                  </div>
               </div>
 
               {/* Statistics */}

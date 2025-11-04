@@ -28,9 +28,7 @@ fresh_env/
 codebase/
 
 # Environment variables
-.env
-.env.local
-.env.*.local
+
 
 # IDEs
 .vscode/

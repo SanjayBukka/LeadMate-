@@ -52,6 +52,13 @@ class DeveloperInsight(BaseModel):
     avg_changes_per_commit: float
     insight: str
 
+def _analyze_local_directory(path: str) -> Dict:
+    """Deprecated local analyzer (kept for backward compatibility).
+    Delegates to GitService.analyze_local_directory.
+    """
+    return git_service.analyze_local_directory(path)
+
+
 @router.post("/analyze-repo", response_model=RepositoryResponse)
 async def analyze_repository(request: RepositoryRequest, current_user = Depends(get_current_user)):
     """Analyze a Git repository and extract insights"""
@@ -59,11 +66,30 @@ async def analyze_repository(request: RepositoryRequest, current_user = Depends(
         company_id = current_user.get('startupId', 'demo_company')
         lead_id = current_user.get('id', 'demo_lead')
         
-        # Clone repository
+        # Local directory fallback: repo_url like "local:<absolute-or-relative-path>"
+        if request.repo_url.lower().startswith("local:"):
+            local_path = request.repo_url.split(":", 1)[1].strip()
+            abs_path = os.path.abspath(local_path)
+            if not os.path.exists(abs_path):
+                return RepositoryResponse(success=False, message=f"Local path not found: {abs_path}")
+            local_data = git_service.analyze_local_directory(abs_path)
+            return RepositoryResponse(
+                success=True,
+                message="Local directory analyzed successfully",
+                data={
+                    "repo_name": request.repo_name,
+                    "file_analysis": local_data.get("file_analysis", {}),
+                    "dependencies": local_data.get("dependencies", []),
+                    "key_files": local_data.get("key_files", {}),
+                    "analysis_date": datetime.now().isoformat()
+                }
+            )
+
+        # Clone repository (Git)
         success, repo_path = git_service.clone_repository(
-            request.repo_url, 
-            request.repo_name, 
-            company_id, 
+            request.repo_url,
+            request.repo_name,
+            company_id,
             lead_id
         )
         
@@ -124,6 +150,7 @@ async def analyze_repository(request: RepositoryRequest, current_user = Depends(
         await notification_service.analyze_and_notify(company_id, lead_id, analysis_data)
         
         # Create success notification
+        active_developers = int(dev_stats.shape[0]) if not dev_stats.empty else 0
         await notification_service.create_notification(
             company_id, lead_id,
             NotificationType.REPOSITORY_ANALYZED,

@@ -13,8 +13,7 @@ import { Dashboard } from './pages/TeamLead/Dashboard';
 import { TaskBoard } from './pages/TeamLead/TaskBoard';
 import { TeamMembers } from './pages/TeamLead/TeamMembers';
 import { AIAssistant } from './pages/TeamLead/AIAssistant';
-import { Workflow } from './pages/TeamLead/Workflow';
-import { ProgressReports } from './pages/TeamLead/ProgressReports';
+import { Management } from './pages/TeamLead/Management';
 import { AgentsHub } from './pages/TeamLead/AgentsHub';
 import { DocAgent } from './pages/TeamLead/Agents/DocAgent';
 import { AIAgents } from './pages/TeamLead/AIAgents';
@@ -112,18 +111,10 @@ function App() {
               }
             />
             <Route
-              path="/lead/workflow"
+              path="/lead/management"
               element={
                 <ProtectedRoute requiredRole="teamlead">
-                  <Workflow />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/lead/reports"
-              element={
-                <ProtectedRoute requiredRole="teamlead">
-                  <ProgressReports />
+                  <Management />
                 </ProtectedRoute>
               }
             />

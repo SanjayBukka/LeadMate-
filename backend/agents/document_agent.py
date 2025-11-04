@@ -16,6 +16,7 @@ import PyPDF2
 from docx import Document as DocxDocument
 import io
 from services.gemini_service import gemini_service
+from langchain_community.llms import Ollama
 
 logger = logging.getLogger(__name__)
 
@@ -58,13 +59,49 @@ class DocumentAgent:
             separators=["\n\n", "\n", " ", ""]
         )
         
-        # Initialize LLM (Gemini with Ollama fallback)
+        # Initialize LLM with strong preference for local Ollama when configured
+        self.llm = None               # LangChain LLM object (optional)
+        self.crewai_llm = None        # CrewAI-compatible llm string (preferred)
+        force_ollama = os.getenv("FORCE_OLLAMA", "").lower() in ("1", "true", "yes")
+        use_gemini = os.getenv("USE_GEMINI", "").lower() in ("1", "true", "yes")
+        google_key = os.getenv("GOOGLE_API_KEY", "").strip()
+        ollama_model = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+        ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
         try:
-            self.llm = gemini_service.get_llm()
-            logger.info(f"✅ LLM initialized: {gemini_service.llm_type} ({gemini_service.model})")
+            # Only consider Gemini if explicitly enabled AND key is present.
+            if force_ollama or not (use_gemini and google_key):
+                # Use local Ollama directly
+                # For CrewAI via litellm, passing a provider string is most reliable
+                # e.g., "ollama/llama3.1:8b"
+                self.crewai_llm = f"ollama/{ollama_model}"
+                # Also keep a LangChain object available if needed elsewhere
+                try:
+                    self.llm = Ollama(model=ollama_model, base_url=ollama_base_url)
+                except Exception:
+                    self.llm = None
+                logger.info(f"✅ Using Ollama LLM: model={ollama_model} base={ollama_base_url}")
+            else:
+                # Try Gemini first, then fallback to Ollama on failure
+                try:
+                    self.llm = gemini_service.get_llm()
+                    # Prefer CrewAI string if service exposes one; fallback to object
+                    try:
+                        self.crewai_llm = getattr(gemini_service, "crewai_model", None)
+                    except Exception:
+                        self.crewai_llm = None
+                    logger.info(f"✅ Using Gemini LLM: {gemini_service.llm_type} ({gemini_service.model})")
+                except Exception as ge:
+                    logger.warning(f"⚠️ Gemini init failed ({ge}), falling back to Ollama")
+                    self.crewai_llm = f"ollama/{ollama_model}"
+                    try:
+                        self.llm = Ollama(model=ollama_model, base_url=ollama_base_url)
+                    except Exception:
+                        self.llm = None
+                    logger.info(f"✅ Fallback to Ollama LLM: model={ollama_model} base={ollama_base_url}")
         except Exception as e:
             self.llm = None
-            logger.error(f"⚠️ LLM initialization failed: {e}. Agent will use fallback responses.")
+            logger.error(f"⚠️ All LLM initialization paths failed: {e}. Agent will use fallback responses.")
         
         # Create CrewAI agent
         self.agent = self._create_agent()
@@ -75,7 +112,10 @@ class DocumentAgent:
     
     def _create_agent(self):
         """Create Document Analysis Agent with CrewAI"""
-        if not self.llm:
+        # Prefer CrewAI string when available (avoids litellm provider issues)
+        llm_for_crewai = self.crewai_llm if self.crewai_llm else self.llm
+
+        if not llm_for_crewai:
             return None
             
         return Agent(
@@ -89,7 +129,7 @@ class DocumentAgent:
                         formation. You ask probing questions to ensure complete understanding.''',
             verbose=True,
             allow_delegation=False,
-            llm=self.llm
+            llm=llm_for_crewai
         )
     
     def extract_text_from_pdf(self, file_data: bytes) -> str:

@@ -17,6 +17,14 @@ from models.user import User
 from utils.auth import get_current_user, get_current_manager
 from services.document_extractor import document_extractor
 from services.gemini_service import gemini_service
+from services.project_data_service import project_data_service
+from utils.text_chunker import chunk_text
+from utils.validation import (
+    validate_file_size, 
+    validate_file_extension, 
+    sanitize_filename,
+    validate_project_id
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,10 +78,30 @@ async def upload_project_documents(
     
     for file in files:
         try:
+            # Validate file
+            if not file.filename:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Filename is required"
+                )
+            
+            # Validate file extension
+            validate_file_extension(file.filename)
+            
+            # Sanitize filename
+            safe_filename = sanitize_filename(file.filename)
+            
             # Generate unique filename
-            file_extension = Path(file.filename).suffix
+            file_extension = Path(safe_filename).suffix
             unique_filename = f"{uuid.uuid4()}{file_extension}"
             file_path = project_dir / unique_filename
+            
+            # Read file content to get size (before saving)
+            content = await file.read()
+            await file.seek(0)  # Reset file pointer
+            
+            # Validate file size
+            validate_file_size(len(content))
             
             # Save file to disk
             with file_path.open("wb") as buffer:
@@ -160,33 +188,34 @@ async def upload_project_documents(
             # Store embeddings in ChromaDB if extraction was successful
             if extracted_content and not extracted_content.startswith('['):
                 try:
-                    from services.vector_store_service import vector_store_service
-                    from utils.text_chunker import chunk_text
+                    # Get project-specific documents collection
+                    docs_collection = project_data_service.get_project_documents_collection(
+                        startup_id=current_user.startupId,
+                        project_id=project_id
+                    )
                     
                     # Chunk the text
                     chunks = chunk_text(extracted_content, chunk_size=1000, overlap=200)
                     
-                    # Create metadata for each chunk
+                    # Create IDs and metadata for each chunk
+                    chunk_ids = [f"{doc_id}_chunk_{i}" for i in range(len(chunks))]
                     chunk_metadatas = [{
                         "document_id": str(doc_id),
                         "filename": file.filename,
                         "chunk_index": i,
                         "project_id": project_id,
+                        "startup_id": current_user.startupId,
                         "uploaded_at": datetime.utcnow().isoformat()
-                    } for i, chunk in enumerate(chunks)]
+                    } for i in range(len(chunks))]
                     
                     # Store in ChromaDB
-                    success = vector_store_service.add_documents(
-                        startup_id=current_user.startupId,
-                        project_id=project_id,
+                    docs_collection.add(
                         documents=chunks,
+                        ids=chunk_ids,
                         metadatas=chunk_metadatas
                     )
                     
-                    if success:
-                        logger.info(f"Stored {len(chunks)} chunks in ChromaDB for {file.filename}")
-                    else:
-                        logger.warning(f"Failed to store embeddings for {file.filename}")
+                    logger.info(f"✅ Stored {len(chunks)} document chunks in ChromaDB for project {project_id}")
                         
                 except Exception as embed_error:
                     logger.error(f"Error creating embeddings for {file.filename}: {embed_error}")

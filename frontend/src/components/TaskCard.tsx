@@ -42,16 +42,7 @@ export function TaskCard({ task, onDragStart }: TaskCardProps) {
         {task.description}
       </p>
 
-      <div className="space-y-2">
-        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-          <User className="w-3 h-3 mr-2" />
-          {task.assignee}
-        </div>
-        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-          <Calendar className="w-3 h-3 mr-2" />
-          {new Date(task.dueDate).toLocaleDateString()}
-        </div>
-      </div>
+      {/* Assignee and due date intentionally omitted per requirements */}
     </div>
   );
 }

@@ -16,14 +16,15 @@ from models.user import User
 from models.team_member import TeamMember, TeamMemberCreate, TeamMemberInDB
 from utils.auth import get_current_user, get_current_teamlead
 from services.resume_processor import resume_processor
+from services.project_data_service import project_data_service
+import json
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/team-members", tags=["Team Members"])
 
-# Create resumes directory
-RESUMES_DIR = Path("uploads/resumes")
-RESUMES_DIR.mkdir(parents=True, exist_ok=True)
+# Create resumes directory (using project_data_service instead)
+# RESUMES_DIR is now handled by project_data_service
 
 
 @router.post("/upload-resume", status_code=status.HTTP_201_CREATED)
@@ -62,11 +63,10 @@ async def upload_resume(
                 detail="Project not found"
             )
         
-        # Save resume file
+        # Save resume file using project_data_service
         file_extension = Path(file.filename).suffix
         unique_filename = f"{uuid.uuid4()}{file_extension}"
-        resume_dir = RESUMES_DIR / current_user.startupId / project_id
-        resume_dir.mkdir(parents=True, exist_ok=True)
+        resume_dir = project_data_service.get_project_resumes_dir(project_id)
         
         file_path = resume_dir / unique_filename
         
@@ -109,6 +109,44 @@ async def upload_resume(
         
         # Get inserted document
         inserted_member = await db.team_members.find_one({"_id": result.inserted_id})
+        
+        # Store resume in ChromaDB for project-specific team formation
+        try:
+            resumes_collection = project_data_service.get_project_resumes_collection(
+                startup_id=current_user.startupId,
+                project_id=project_id
+            )
+            
+            # Store resume data as JSON document
+            resume_json = json.dumps({
+                "name": extracted_info.get("name", "Unknown"),
+                "email": extracted_info.get("email"),
+                "phone": extracted_info.get("phone"),
+                "role": extracted_info.get("role", "Unknown"),
+                "techStack": extracted_info.get("techStack", []),
+                "skills": extracted_info.get("skills", {}),
+                "experience": extracted_info.get("experience"),
+                "education": extracted_info.get("education", []),
+                "recentProjects": extracted_info.get("recentProjects", [])
+            })
+            
+            resume_id = f"resume_{str(result.inserted_id)}"
+            resumes_collection.add(
+                documents=[resume_json],
+                ids=[resume_id],
+                metadatas=[{
+                    "team_member_id": str(result.inserted_id),
+                    "project_id": project_id,
+                    "startup_id": current_user.startupId,
+                    "name": extracted_info.get("name", "Unknown"),
+                    "uploaded_at": datetime.utcnow().isoformat()
+                }]
+            )
+            
+            logger.info(f"✅ Stored resume embeddings in ChromaDB for project {project_id}")
+        except Exception as embed_error:
+            logger.error(f"Error storing resume embeddings: {embed_error}")
+            # Don't fail if embeddings fail
         
         # Convert to response model
         response_data = {

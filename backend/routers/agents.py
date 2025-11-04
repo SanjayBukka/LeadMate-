@@ -522,8 +522,9 @@ async def get_stack_chat_history(company_id: str, lead_id: str):
 async def chat_with_stack_agent(request: ChatRequest):
     """Chat with Stack Agent"""
     try:
-        logger.info(f"Stack Agent chat request - company_id: {request.company_id}, lead_id: {request.lead_id}, message length: {len(request.message)}")
-        agent = get_stack_agent(request.company_id, request.lead_id)
+        logger.info(f"Stack Agent chat request - company_id: {request.company_id}, lead_id: {request.lead_id}, project_id: {request.project_id}")
+        context_id = request.project_id or request.lead_id
+        agent = get_stack_agent(request.company_id, context_id)
         result = agent.chat_with_agent(request.message)
         
         logger.info(f"Stack Agent response generated successfully")
@@ -554,8 +555,9 @@ async def get_task_chat_history(company_id: str, lead_id: str):
 async def chat_with_task_agent(request: ChatRequest):
     """Chat with Task Agent"""
     try:
-        logger.info(f"Task Agent chat request - company_id: {request.company_id}, lead_id: {request.lead_id}, message length: {len(request.message)}")
-        agent = get_task_agent(request.company_id, request.lead_id)
+        logger.info(f"Task Agent chat request - company_id: {request.company_id}, lead_id: {request.lead_id}, project_id: {request.project_id}")
+        context_id = request.project_id or request.lead_id
+        agent = get_task_agent(request.company_id, context_id)
         result = agent.chat_with_agent(request.message)
         
         logger.info(f"Task Agent response generated successfully")
@@ -574,8 +576,9 @@ async def chat_with_task_agent(request: ChatRequest):
 async def chat_with_team_agent(request: ChatRequest):
     """Chat with Team Agent"""
     try:
-        logger.info(f"Team Agent chat request - company_id: {request.company_id}, lead_id: {request.lead_id}, message length: {len(request.message)}")
-        agent = get_team_agent(request.company_id, request.lead_id)
+        logger.info(f"Team Agent chat request - company_id: {request.company_id}, lead_id: {request.lead_id}, project_id: {request.project_id}")
+        context_id = request.project_id or request.lead_id
+        agent = get_team_agent(request.company_id, context_id)
         result = await agent.chat_with_agent(request.message)
         
         logger.info(f"Team Agent response generated successfully")
