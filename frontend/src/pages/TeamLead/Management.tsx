@@ -79,24 +79,6 @@ export function Management() {
     return m;
   }, [repoCommits]);
 
-  const generateAIAnswer = (question: string) => {
-    const totalCommits = repoStats?.total_commits || repoCommits.length || 0;
-    const contributors = repoStats?.active_developers || repoDevelopers.length || 0;
-    const recent30 = repoStats?.recent_commits || 0;
-    const topDev = repoDevelopers?.[0]?.developer || 'Unknown';
-    const recent = repoCommits.slice(0, 5).map((c: any) => `- ${c.author}: ${(c.message || '').slice(0, 120)}`);
-    const context = [
-      `Total commits: ${totalCommits}`,
-      `Contributors: ${contributors}`,
-      `Recent 30d: ${recent30}`,
-      `Top contributor: ${topDev}`,
-      `Recent commits:`,
-      ...recent
-    ].join('\n');
-    const answer = `Based on the repository data, here are insights related to your question:\n\n${context}\n\nAnswering your question: "${question}" — the team shows ${recent30 > 0 ? 'ongoing' : 'low'} recent activity with ${contributors} contributor(s). Focus appears around: ${(recent[0] || '').replace('- ', '') || 'recent commits unavailable'}.`;
-    return answer;
-  };
-
   const generateReport = (type: typeof reportType) => {
     const totalCommits = repoStats?.total_commits || repoCommits.length || 0;
     const contributors = repoStats?.active_developers || repoDevelopers.length || 0;
@@ -124,135 +106,65 @@ export function Management() {
   };
 
   const analyzeLocal = async () => {
-    if (!localPath || !localName) return;
+    if (!localPath) return;
     setLoading(true);
     setResult(null);
     try {
       const response = await fetch(`${API_BASE_URL}/api/workflow/analyze-repo`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify({
-          repo_url: `local:${localPath}`,
-          repo_name: localName
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo_url: `local:${localPath}`, repo_name: localName || 'local-repo', max_commits: 100 })
       });
-
       const data = await response.json();
       if (!response.ok || !data?.success) {
         alert(data?.message || 'Failed to analyze');
         return;
       }
-      setResult(data.data as LocalAnalysisData);
+      setRepoName(data.repo_name);
+      setRepoResult({ file_analysis: data.file_analysis, recent_activity: data.recent_activity });
+      setRepoCommits(data.commits || []);
+      setRepoDevelopers((data.developer_stats || []).map((d: any) => ({ ...d, developer: d.author })));
+      // basic stats derived locally
+      setRepoStats({
+        total_commits: (data.commits || []).length,
+        active_developers: new Set((data.commits || []).map((c: any) => c.author)).size,
+        recent_commits: data.recent_activity?.total_commits || 0,
+        lines_added: data.recent_activity?.lines_added || 0,
+        lines_removed: data.recent_activity?.lines_removed || 0,
+        file_types: data.file_analysis || {}
+      });
     } catch (e) {
       console.error(e);
-      alert('Error analyzing local directory');
+      alert('Error analyzing local repository');
     } finally {
       setLoading(false);
     }
   };
 
-  const runCodeClarity = () => {
-    if (!repoResult && !repoStats && repoCommits.length === 0) {
-      setClarity(["Analyze a repository first."]);
-      return;
-    }
-
-    const suggestions: string[] = [];
-
-    const totalCommits = repoStats?.total_commits || (repoResult?.commits_data?.length ?? 0);
-    const contributors = repoStats?.active_developers || (repoDevelopers?.length ?? 0);
-    const recent30 = repoStats?.recent_commits || 0;
-    const linesAdded = repoStats?.lines_added || 0;
-    const linesRemoved = repoStats?.lines_removed || 0;
-    const fileTypes: Record<string, number> = (repoResult?.file_analysis || repoStats?.file_types) || {};
-
-    // Activity & cadence
-    if (recent30 < Math.max(3, Math.ceil(totalCommits * 0.05))) {
-      suggestions.push("Low recent activity – consider a cadence (weekly planning / PR goals).");
-    } else {
-      suggestions.push("Healthy recent activity – keep PR cycle short and focused.");
-    }
-
-    // Bus factor
-    if (contributors <= 1) {
-      suggestions.push("Single contributor risk – cross-train at least one more developer.");
-    } else if (contributors < 3) {
-      suggestions.push("Small team – add docs and onboarding guides to reduce knowledge risk.");
-    }
-
-    // Change size
-    if (linesAdded + linesRemoved > 20000) {
-      suggestions.push("Large total code churn – introduce feature flags and smaller PRs.");
-    } else if (linesAdded + linesRemoved > 5000) {
-      suggestions.push("Moderate churn – enforce PR size limits and automated checks.");
-    }
-
-    // Testing heuristics
-    const hasJsTs = (fileTypes['.js'] || 0) + (fileTypes['.ts'] || 0) + (fileTypes['.tsx'] || 0) + (fileTypes['.jsx'] || 0);
-    const hasPy = (fileTypes['.py'] || 0);
-    const likelyNeedsTests = (hasJsTs + hasPy) > 20;
-    if (likelyNeedsTests) {
-      suggestions.push("Add/verify automated tests (unit + integration) and CI coverage gates.");
-    }
-
-    // Ownership signal
-    if (repoDevelopers?.length) {
-      const top = [...repoDevelopers].sort((a,b) => (b.commits||0) - (a.commits||0))[0];
-      if (top && top.commits > (totalCommits * 0.6)) {
-        suggestions.push(`High ownership by ${top.developer} – spread context with pair reviews.`);
-      }
-    }
-
-    // Frontend/Backend balance
-    if (hasJsTs > 0 && hasPy > 0) {
-      suggestions.push("Mixed stack detected – align API contracts and shared types/interfaces.");
-    }
-
-    // Commit hygiene
-    if (repoCommits?.length) {
-      const longMsgs = repoCommits.filter((c: any) => (c.message||'').length > 120).length;
-      const veryShort = repoCommits.filter((c: any) => (c.message||'').trim().length < 10).length;
-      if (veryShort > repoCommits.length * 0.3) {
-        suggestions.push("Improve commit messages – include intent and scope for better history.");
-      } else if (longMsgs > repoCommits.length * 0.5) {
-        suggestions.push("Commit messages too long – move detail to PR description, keep title concise.");
-      }
-    }
-
-    setClarity(suggestions.length ? suggestions : ["No critical issues detected."]);
-  };
-
   const analyzeRepo = async () => {
-    if (!repoUrl || !repoName) return;
+    if (!repoUrl) return;
     setLoading(true);
     setRepoResult(null);
     try {
       const response = await fetch(`${API_BASE_URL}/api/workflow/analyze-repo`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify({
-          repo_url: repoUrl,
-          repo_name: repoName
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo_url: repoUrl, repo_name: repoName || 'repo', max_commits: 100 })
       });
       const data = await response.json();
       if (!response.ok || !data?.success) {
         alert(data?.message || 'Failed to analyze repository');
         return;
       }
-      setRepoResult(data.data);
-      // also fetch stats/developers/commits for richer UI
+      const payload = data.data || {};
+      setRepoName(payload.repo_name || repoName);
+      setRepoResult({ file_analysis: payload.file_analysis, recent_activity: payload.recent_activity });
+      // Also fetch details via workflow endpoints for consistency
       try {
         const [statsRes, devRes, commitsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/workflow/repo/${repoName}/stats`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } }),
-          fetch(`${API_BASE_URL}/api/workflow/repo/${repoName}/developers`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } }),
-          fetch(`${API_BASE_URL}/api/workflow/repo/${repoName}/commits?limit=0`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } })
+          fetch(`${API_BASE_URL}/api/workflow/repo/${payload.repo_name || repoName}/stats`),
+          fetch(`${API_BASE_URL}/api/workflow/repo/${payload.repo_name || repoName}/developers`),
+          fetch(`${API_BASE_URL}/api/workflow/repo/${payload.repo_name || repoName}/commits?limit=100`)
         ]);
         if (statsRes.ok) setRepoStats(await statsRes.json());
         if (devRes.ok) setRepoDevelopers(await devRes.json());
@@ -260,15 +172,6 @@ export function Management() {
           const cd = await commitsRes.json();
           setRepoCommits(cd.commits || []);
         }
-        // extras: insights + clarity from backend
-        try {
-          const [insRes, clarityRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/workflow/repo/${repoName}/insights`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } }),
-            fetch(`${API_BASE_URL}/api/workflow/repo/${repoName}/clarity`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } })
-          ]);
-          if (insRes.ok) setRepoInsights(await insRes.json());
-          if (clarityRes.ok) setRepoClarity(await clarityRes.json());
-        } catch {}
       } catch {}
     } catch (e) {
       console.error(e);
@@ -310,6 +213,7 @@ export function Management() {
               </div>
             </div>
 
+            {false && (
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg p-6 mb-8">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <FolderSearch className="w-5 h-5" /> Local Directory
@@ -338,13 +242,14 @@ export function Management() {
               </div>
               <button
                 onClick={analyzeLocal}
-                disabled={loading || !localPath || !localName}
+                disabled={loading || !localPath}
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ListChecks className="w-4 h-4" />}
                 {loading ? 'Analyzing...' : 'Analyze'}
               </button>
             </div>
+            )}
 
             {result && (
               <div className="space-y-8">
@@ -433,7 +338,7 @@ export function Management() {
               </div>
               <button
                 onClick={analyzeRepo}
-                disabled={loading || !repoUrl || !repoName}
+                disabled={loading || !repoUrl}
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}

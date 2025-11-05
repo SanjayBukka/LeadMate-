@@ -45,6 +45,8 @@ from routers.team_formation import router as team_formation_router
 from routers.mongodb_agents import router as mongodb_agents_router # NEW MongoDB Agents
 from routers.document_sync import router as document_sync_router  # Document sync endpoints
 from routers.project_agents import router as project_agents_router  # Project-centric agents
+from routers.management import router as management_router  # Team Lead Management endpoints
+from routes.management_routes import router as management_legacy_router  # Legacy workflow-style endpoints
 
 app = FastAPI(title="LeadMate API", version="1.0.0")
 
@@ -97,6 +99,8 @@ app.include_router(team_formation_router)  # Team Formation - CrewAI Orchestrati
 app.include_router(mongodb_agents_router)  # MongoDB Agents - New Vector Search System # NEW
 app.include_router(document_sync_router)  # Document sync endpoints
 app.include_router(project_agents_router)  # Project-centric agents (NEW)
+app.include_router(management_router)  # Management dashboard analysis
+app.include_router(management_legacy_router)  # Legacy workflow routes (/api/workflow/*)
 app.include_router(documents.router)
 app.include_router(team.router)
 app.include_router(stack.router)
