@@ -2,23 +2,19 @@
 Management routes (workflow-style) for compatibility with existing frontend calls.
 This router analyzes git repositories, caches results, and exposes stats/devs/commits/insights.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Dict, Any
 from datetime import datetime
 import logging
 import os
-import sys
 
-# Add managemnet folder to path (tools live there)
-MANAGEMNET_PATH = r"C:\Users\Sanjay\Desktop\Lead Mate full Application\managemnet"
-if MANAGEMNET_PATH not in sys.path:
-    sys.path.insert(0, MANAGEMNET_PATH)
-
-from repo_analyzer import RepoAnalyzer  # type: ignore
-from ai_insights import AIInsights  # type: ignore
-from data_manager import DataManager  # type: ignore
-from ollama_client import OllamaClient  # type: ignore
+from management.repo_analyzer import RepoAnalyzer
+from management.ai_insights import AIInsights
+from management.data_manager import DataManager
+from management.ollama_client import OllamaClient
+from management.config import APP_CONFIG
+from routers.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -28,12 +24,61 @@ ollama = OllamaClient()
 ai_insights = AIInsights()
 data_manager = DataManager()
 
+# Simple in-memory status tracker for background jobs
+analysis_status: Dict[str, Dict[str, Any]] = {}
 
 class AnalyzeRequest(BaseModel):
     repo_url: str
     repo_name: str
     max_commits: int = 100
 
+def run_analysis(repo_name: str, repo_url: str, max_commits: int):
+    """Background task for repository analysis"""
+    try:
+        analysis_status[repo_name] = {"status": "processing", "start_time": datetime.now().isoformat()}
+        
+        # Determine target path
+        if repo_url.startswith("local:"):
+            repo_path = repo_url.replace("local:", "").strip()
+            is_local = True
+        else:
+            repo_path = os.path.join(APP_CONFIG.repos_dir, repo_name)
+            is_local = False
+
+        analyzer = RepoAnalyzer(repo_path)
+        if not is_local:
+            # Use allowlist check
+            allowed_domains = os.getenv("ALLOWED_REPO_DOMAINS", "github.com,gitlab.com").split(",")
+            if not any(domain in repo_url for domain in allowed_domains):
+                analysis_status[repo_name] = {"status": "failed", "message": "Repository domain not allowed"}
+                return
+
+            if not analyzer.clone_or_open_repo(repo_url, depth=1):
+                analysis_status[repo_name] = {"status": "failed", "message": "Failed to clone repository"}
+                return
+        else:
+            try:
+                import git
+                analyzer.repo = git.Repo(repo_path)
+            except Exception as e:
+                analysis_status[repo_name] = {"status": "failed", "message": f"Failed to open local repository: {e}"}
+                return
+
+        commits_df = analyzer.get_commits_data(max_commits)
+        dev_stats = analyzer.get_developer_stats()
+        file_analysis = analyzer.get_file_analysis()
+        recent_activity = analyzer.get_recent_activity()
+
+        data_manager.save_analysis_data(repo_name, commits_df, dev_stats, file_analysis)
+
+        analysis_status[repo_name] = {
+            "status": "completed",
+            "completion_time": datetime.now().isoformat(),
+            "repo_name": repo_name
+        }
+    except Exception as e:
+        logger.error(f"Background analysis failed for {repo_name}: {e}", exc_info=True)
+        analysis_status[repo_name] = {"status": "failed", "message": str(e)}
 
 @router.get("/health")
 async def check_health():
@@ -44,82 +89,25 @@ async def check_health():
         "available_models": ollama.get_available_models() if ok else [],
     }
 
-
 @router.post("/analyze-repo")
-async def analyze_repository(request: AnalyzeRequest):
-    try:
-        repo_name = request.repo_name.strip()
-        repo_url = request.repo_url.strip()
-        max_commits = request.max_commits
+async def analyze_repository(request: AnalyzeRequest, background_tasks: BackgroundTasks, current_user: Any = Depends(get_current_user)):
+    repo_name = request.repo_name.strip()
+    background_tasks.add_task(run_analysis, repo_name, request.repo_url.strip(), request.max_commits)
+    return {"success": True, "message": "Analysis started in background", "repo_name": repo_name}
 
-        # Determine target path
-        if repo_url.startswith("local:"):
-            repo_path = repo_url.replace("local:", "").strip()
-            is_local = True
-        else:
-            repo_path = os.path.join(MANAGEMNET_PATH, "repositories", repo_name)
-            is_local = False
-
-        analyzer = RepoAnalyzer(repo_path)
-        if not is_local:
-            if not analyzer.clone_or_open_repo(repo_url):
-                return {"success": False, "message": "Failed to clone repository. Check URL and try again."}
-        else:
-            try:
-                import git  # type: ignore
-                analyzer.repo = git.Repo(repo_path)
-            except Exception as e:
-                return {"success": False, "message": f"Failed to open local repository: {e}"}
-
-        commits_df = analyzer.get_commits_data(max_commits)
-        dev_stats = analyzer.get_developer_stats()
-        file_analysis = analyzer.get_file_analysis()
-        recent_activity = analyzer.get_recent_activity()
-
-        data_manager.save_analysis_data(repo_name, commits_df, dev_stats, file_analysis)
-
-        ai_summary = None
-        if ollama.check_availability():
-            try:
-                ai_summary = ai_insights.generate_project_summary(commits_df, file_analysis, recent_activity)
-            except Exception as e:
-                logger.error(f"AI summary failed: {e}")
-
-        commits_data = commits_df.to_dict("records") if not commits_df.empty else []
-
-        dev_stats_list = []
-        if not dev_stats.empty:
-            for dev_name in dev_stats.index:
-                stats = dev_stats.loc[dev_name]
-                dev_stats_list.append({
-                    "developer": dev_name,
-                    "commits": int(stats.get("commits", 0)),
-                    "insertions": int(stats.get("insertions", 0)),
-                    "deletions": int(stats.get("deletions", 0)),
-                    "files_modified": int(stats.get("files_modified", 0)),
-                })
-
-        return {
-            "success": True,
-            "message": "Repository analyzed successfully",
-            "data": {
-                "repo_name": repo_name,
-                "file_analysis": file_analysis,
-                "dependencies": [],
-                "key_files": {},
-                "commits_data": commits_data[:100],
-                "developer_stats": dev_stats_list,
-                "analysis_date": datetime.now().isoformat(),
-                "ai_summary": ai_summary,
-            },
-        }
-    except Exception as e:
-        logger.error(f"Error analyzing repository: {e}", exc_info=True)
-        return {"success": False, "message": f"Error: {e}"}
-
+@router.get("/status/{repo_name}")
+async def get_analysis_status(repo_name: str, current_user: Any = Depends(get_current_user)):
+    status = analysis_status.get(repo_name)
+    if not status:
+        # Check if we have cached data
+        commits_df, _, _ = data_manager.load_analysis_data(repo_name)
+        if not commits_df.empty:
+            return {"status": "completed", "repo_name": repo_name}
+        return {"status": "not_found"}
+    return status
 
 @router.get("/repo/{repo_name}/stats")
-async def get_repository_stats(repo_name: str):
+async def get_repository_stats(repo_name: str, current_user: Any = Depends(get_current_user)):
     commits_df, dev_stats, file_analysis = data_manager.load_analysis_data(repo_name)
     if commits_df.empty:
         raise HTTPException(status_code=404, detail="Repository not found in cache")
@@ -137,9 +125,8 @@ async def get_repository_stats(repo_name: str):
         "lines_removed": recent_activity.get('lines_removed', 0),
     }
 
-
 @router.get("/repo/{repo_name}/developers")
-async def get_developers(repo_name: str):
+async def get_developers(repo_name: str, current_user: Any = Depends(get_current_user)):
     _, dev_stats, _ = data_manager.load_analysis_data(repo_name)
     if dev_stats.empty:
         return []
@@ -156,9 +143,8 @@ async def get_developers(repo_name: str):
         })
     return developers
 
-
 @router.get("/repo/{repo_name}/commits")
-async def get_commits(repo_name: str, limit: int = 100):
+async def get_commits(repo_name: str, limit: int = 100, current_user: Any = Depends(get_current_user)):
     commits_df, _, _ = data_manager.load_analysis_data(repo_name)
     if commits_df.empty:
         return {"commits": []}

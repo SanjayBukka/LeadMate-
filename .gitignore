@@ -127,6 +127,7 @@ data/
 test_*.py
 *_test.py
 !backend/test_api.py
+!backend/tests/*.py
 
 # Documentation build
 docs/_build/

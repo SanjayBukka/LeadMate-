@@ -46,12 +46,14 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: Optional[str] = None
     
     # CORS Settings
-    ALLOWED_ORIGINS: list = [
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:3000"
-    ]
+    ALLOWED_ORIGINS: list = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:3000").split(",")
     
+    # Repository Analysis Configuration
+    ALLOWED_REPO_DOMAINS: list = os.getenv("ALLOWED_REPO_DOMAINS", "github.com,gitlab.com").split(",")
+    REPOS_DIR: str = os.getenv("REPOS_DIR", "./repositories")
+    DATA_DIR: str = os.getenv("DATA_DIR", "./data")
+    MAX_COMMITS_ANALYSIS: int = int(os.getenv("MAX_COMMITS_ANALYSIS", "100"))
+
     class Config:
         env_file = ".env"
         case_sensitive = True

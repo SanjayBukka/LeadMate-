@@ -1,95 +1,23 @@
-"""
-Management Service adapter that wraps the repository analysis utilities in
-the top-level `managemnet` folder to make them available to FastAPI routers.
-
-This service exposes simple methods to:
-- clone/open a repository
-- compute commits, developer stats, file analysis, recent activity
-- generate optional AI insights/summaries when Ollama is available
-"""
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-# Ensure the top-level `managemnet` package is importable
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-MANAGEMENT_DIR = PROJECT_ROOT / "managemnet"
-if str(MANAGEMENT_DIR) not in sys.path:
-    sys.path.append(str(MANAGEMENT_DIR))
-
 import pandas as pd  # type: ignore
 
-import importlib.util
-
-
-def _load_management_module(module_name: str, file_path: Path):
-    spec = importlib.util.spec_from_file_location(module_name, str(file_path))
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Cannot load module {module_name} from {file_path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)  # type: ignore[attr-defined]
-    return module
-
-
-_MANAGEMENT_LOADED = False
-RepoAnalyzer = None  # type: ignore
-AIInsights = None  # type: ignore
-DataManager = None  # type: ignore
-OllamaClient = None  # type: ignore
-APP_CONFIG = None  # type: ignore
-
-
-def _ensure_management_loaded():
-    global _MANAGEMENT_LOADED, RepoAnalyzer, AIInsights, DataManager, OllamaClient, APP_CONFIG
-    if _MANAGEMENT_LOADED:
-        return
-    # Load managemnet/config.py under a unique name and temporarily alias to 'config'
-    mgmt_config = _load_management_module("mgmt_config", MANAGEMENT_DIR / "config.py")
-    old_config_module = sys.modules.get("config")
-    try:
-        sys.modules["config"] = mgmt_config  # Ensure managemnet modules see APP_CONFIG/OLLAMA_CONFIG
-        # Load dependent modules which import from 'config'
-        RepoAnalyzer = _load_management_module(
-            "mgmt_repo_analyzer", MANAGEMENT_DIR / "repo_analyzer.py"
-        ).RepoAnalyzer  # type: ignore[attr-defined]
-        AIInsights = _load_management_module(
-            "mgmt_ai_insights", MANAGEMENT_DIR / "ai_insights.py"
-        ).AIInsights  # type: ignore[attr-defined]
-        DataManager = _load_management_module(
-            "mgmt_data_manager", MANAGEMENT_DIR / "data_manager.py"
-        ).DataManager  # type: ignore[attr-defined]
-        OllamaClient = _load_management_module(
-            "mgmt_ollama_client", MANAGEMENT_DIR / "ollama_client.py"
-        ).OllamaClient  # type: ignore[attr-defined]
-        APP_CONFIG = mgmt_config.APP_CONFIG  # type: ignore[attr-defined]
-        # Normalize APP_CONFIG paths to project-absolute so backend and streamlit share the same caches
-        try:
-            from pathlib import Path as _P
-            BACKEND_DIR = Path(__file__).resolve().parents[1]
-            # Use backend-relative dirs so anything cloned by the portal (under backend/repositories) is visible
-            APP_CONFIG.data_dir = str((BACKEND_DIR / "data").resolve())  # type: ignore[attr-defined]
-            APP_CONFIG.repos_dir = str((BACKEND_DIR / "repositories").resolve())  # type: ignore[attr-defined]
-            for _d in [APP_CONFIG.data_dir, APP_CONFIG.repos_dir]:  # type: ignore[attr-defined]
-                _P(_d).mkdir(parents=True, exist_ok=True)
-        except Exception:
-            pass
-        _MANAGEMENT_LOADED = True
-    finally:
-        # Restore original 'config' module if it existed to avoid polluting global imports
-        if old_config_module is not None:
-            sys.modules["config"] = old_config_module
-        else:
-            sys.modules.pop("config", None)
+from management.repo_analyzer import RepoAnalyzer
+from management.ai_insights import AIInsights
+from management.data_manager import DataManager
+from management.ollama_client import OllamaClient
+from management.config import APP_CONFIG
 
 
 class ManagementService:
     def __init__(self) -> None:
-        _ensure_management_loaded()
-        self.data_manager = DataManager()  # type: ignore[call-arg]
-        self.ai_insights = AIInsights()  # type: ignore[call-arg]
-        self.ollama = OllamaClient()  # type: ignore[call-arg]
+        self.data_manager = DataManager()
+        self.ai_insights = AIInsights()
+        self.ollama = OllamaClient()
 
     def analyze_repository(self, repo_url: str, max_commits: int = 100) -> Dict[str, Any]:
         """
