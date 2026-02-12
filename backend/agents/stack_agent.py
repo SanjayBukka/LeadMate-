@@ -217,8 +217,10 @@ class StackAgent:
         try:
             results = self.resumes_collection.get(
                 where={
-                    "company_id": self.company_id,
-                    "lead_id": self.lead_id
+                    "$and": [
+                        {"company_id": {"$eq": self.company_id}},
+                        {"lead_id": {"$eq": self.lead_id}}
+                    ]
                 }
             )
             
@@ -593,8 +595,8 @@ class StackAgent:
             results = self.doc_chat_collection.get(
                 where={
                     "$and": [
-                        {"company_id": self.company_id},
-                        {"lead_id": self.lead_id}
+                        {"company_id": {"$eq": self.company_id}},
+                        {"lead_id": {"$eq": self.lead_id}}
                     ]
                 }
             )
@@ -659,8 +661,10 @@ class StackAgent:
         try:
             results = self.iterations_collection.get(
                 where={
-                    "company_id": self.company_id,
-                    "lead_id": self.lead_id
+                    "$and": [
+                        {"company_id": {"$eq": self.company_id}},
+                        {"lead_id": {"$eq": self.lead_id}}
+                    ]
                 }
             )
             

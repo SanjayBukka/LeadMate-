@@ -53,7 +53,7 @@ export function EditProjectModal({ isOpen, onClose, project, onProjectUpdated }:
   const [teamLeadId, setTeamLeadId] = useState('');
   const [progress, setProgress] = useState(0);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001';
   const token = localStorage.getItem('authToken');
 
   useEffect(() => {

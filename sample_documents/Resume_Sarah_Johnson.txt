@@ -1,0 +1,140 @@
+SARAH JOHNSON
+Senior Frontend Developer
+
+Email: sarah.johnson@email.com
+Phone: (555) 123-4567
+Location: San Francisco, CA
+LinkedIn: linkedin.com/in/sarahjohnson
+GitHub: github.com/sarahjohnson
+
+PROFESSIONAL SUMMARY
+-------------------
+Highly skilled Senior Frontend Developer with 6+ years of experience building responsive, performant web applications using React, TypeScript, and modern frontend technologies. Proven track record of leading frontend teams and delivering high-quality user experiences.
+
+TECHNICAL SKILLS
+----------------
+Frontend Technologies:
+- React.js (Expert) - 6 years
+- TypeScript (Advanced) - 4 years
+- JavaScript ES6+ (Expert) - 7 years
+- Redux, Redux Toolkit (Advanced) - 5 years
+- Next.js (Intermediate) - 2 years
+
+Styling & UI:
+- Tailwind CSS (Advanced) - 3 years
+- CSS3, SASS/SCSS (Expert) - 7 years
+- Material-UI, Ant Design (Advanced)
+- Responsive Design (Expert)
+- CSS-in-JS (Styled Components, Emotion)
+
+Build Tools & Testing:
+- Vite, Webpack (Advanced)
+- Jest, React Testing Library (Advanced)
+- Cypress (Intermediate)
+- Git, GitHub Actions (Advanced)
+
+Additional Skills:
+- RESTful APIs integration
+- GraphQL with Apollo Client
+- Mobile responsive design
+- Accessibility (WCAG 2.1)
+- Performance optimization
+- Agile/Scrum methodologies
+
+WORK EXPERIENCE
+---------------
+
+Senior Frontend Developer
+TechCorp Solutions, San Francisco, CA
+June 2021 - Present
+
+• Led a team of 4 frontend developers in building a SaaS platform serving 50,000+ users
+• Architected and implemented a component library used across 5 products, reducing development time by 40%
+• Improved application performance by 60%, reducing load time from 5s to 2s through code splitting and lazy loading
+• Mentored junior developers and conducted code reviews to maintain code quality
+• Collaborated with UX designers to implement pixel-perfect, responsive designs
+• Implemented CI/CD pipeline using GitHub Actions, automating testing and deployment
+
+Technologies: React, TypeScript, Redux Toolkit, Tailwind CSS, Vite, Jest, Cypress
+
+Frontend Developer
+Digital Innovations Inc., San Jose, CA
+March 2019 - May 2021
+
+• Developed and maintained 3 customer-facing web applications with 10,000+ daily active users
+• Implemented real-time features using WebSockets and Server-Sent Events
+• Reduced bundle size by 45% through code optimization and tree shaking
+• Integrated third-party APIs including payment gateways (Stripe) and analytics (Google Analytics)
+• Created comprehensive documentation for component library and best practices
+• Participated in daily standups and sprint planning in Agile environment
+
+Technologies: React, JavaScript, Redux, Material-UI, Webpack, Jest
+
+Junior Frontend Developer
+StartupXYZ, Palo Alto, CA
+January 2018 - February 2019
+
+• Built responsive landing pages and marketing websites using React and CSS3
+• Converted Figma designs into functional React components with 95% accuracy
+• Implemented form validation and error handling for user input
+• Optimized images and assets for faster page load times
+• Fixed bugs and implemented feature requests based on user feedback
+
+Technologies: React, JavaScript, Bootstrap, SASS
+
+EDUCATION
+---------
+Bachelor of Science in Computer Science
+University of California, Berkeley
+Graduated: December 2017
+GPA: 3.7/4.0
+
+CERTIFICATIONS
+--------------
+• AWS Certified Developer - Associate (2022)
+• React Developer Certification - Udemy (2020)
+
+PROJECTS
+--------
+E-Commerce Platform (Personal Project)
+• Built a full-stack e-commerce application with React, TypeScript, and Node.js
+• Implemented features: product catalog, shopping cart, checkout, payment integration
+• Deployed on AWS with CI/CD pipeline
+• GitHub: github.com/sarahjohnson/ecommerce-platform
+
+Open Source Contributions:
+• Contributed to React Router (5 merged PRs)
+• Created a popular React hooks library with 500+ GitHub stars
+• Active contributor to various frontend open-source projects
+
+AWARDS & ACHIEVEMENTS
+--------------------
+• "Developer of the Quarter" at TechCorp Solutions (Q2 2023)
+• Hackathon Winner - Bay Area Tech Hackathon 2022 (Best Frontend Implementation)
+• Published 10+ technical articles on Medium with 50,000+ total views
+
+SOFT SKILLS
+-----------
+• Strong communication and collaboration skills
+• Experience mentoring junior developers
+• Problem-solving and analytical thinking
+• Time management and ability to meet deadlines
+• Adaptability to new technologies and frameworks
+• Leadership and team coordination
+
+LANGUAGES
+---------
+English (Native)
+Spanish (Intermediate)
+
+INTERESTS
+---------
+• Contributing to open-source projects
+• Writing technical blog posts
+• Attending tech conferences and meetups
+• UI/UX design
+• Photography
+
+REFERENCES
+----------
+Available upon request

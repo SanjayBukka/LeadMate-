@@ -1,0 +1,178 @@
+MICHAEL CHEN
+Backend Developer | Node.js Specialist
+
+Contact Information
+Email: michael.chen@email.com
+Phone: (555) 987-6543
+Location: Seattle, WA
+GitHub: github.com/michaelchen
+LinkedIn: linkedin.com/in/michael-chen-dev
+
+PROFESSIONAL SUMMARY
+-------------------
+Experienced Backend Developer with 5+ years of expertise in building scalable APIs and microservices using Node.js, Express, and MongoDB. Strong background in database design, API architecture, and cloud deployment. Passionate about writing clean, efficient code and optimizing application performance.
+
+CORE COMPETENCIES
+-----------------
+Backend Development:
+- Node.js (Expert) - 5 years
+- Express.js (Expert) - 5 years
+- RESTful API Design (Advanced) - 5 years
+- GraphQL (Intermediate) - 2 years
+- Microservices Architecture (Advanced) - 3 years
+
+Databases:
+- MongoDB (Expert) - 5 years
+- PostgreSQL (Advanced) - 3 years
+- Redis (Advanced) - 3 years
+- MySQL (Intermediate) - 2 years
+- Mongoose ODM (Expert) - 5 years
+
+Cloud & DevOps:
+- AWS (EC2, S3, Lambda, RDS) (Advanced) - 4 years
+- Docker (Advanced) - 3 years
+- Kubernetes (Intermediate) - 2 years
+- CI/CD (GitHub Actions, Jenkins) (Advanced) - 3 years
+- Linux/Unix (Advanced) - 5 years
+
+Security & Authentication:
+- JWT authentication (Expert)
+- OAuth 2.0 (Advanced)
+- bcrypt, encryption (Advanced)
+- API security best practices (Advanced)
+
+Additional Skills:
+- Git version control (Expert)
+- Agile/Scrum methodologies
+- Unit & Integration testing (Jest, Mocha)
+- API documentation (Swagger/OpenAPI)
+- Message queues (RabbitMQ, AWS SQS)
+- WebSockets (Socket.io)
+
+PROFESSIONAL EXPERIENCE
+-----------------------
+
+Senior Backend Developer
+CloudTech Systems, Seattle, WA
+July 2021 - Present
+
+• Designed and implemented microservices architecture serving 100,000+ concurrent users
+• Built RESTful APIs handling 5 million requests per day with 99.9% uptime
+• Optimized database queries, reducing response time by 70% (from 500ms to 150ms)
+• Implemented caching strategy using Redis, improving API performance by 3x
+• Led backend team of 3 developers, conducting code reviews and mentoring
+• Migrated monolithic application to microservices, improving scalability and maintainability
+• Set up CI/CD pipeline using GitHub Actions, reducing deployment time from 2 hours to 15 minutes
+• Implemented comprehensive logging and monitoring using ELK stack and Prometheus
+
+Tech Stack: Node.js, Express, MongoDB, PostgreSQL, Redis, Docker, Kubernetes, AWS
+
+Backend Developer
+DataFlow Solutions, Portland, OR
+March 2019 - June 2021
+
+• Developed and maintained 8+ RESTful APIs for web and mobile applications
+• Implemented authentication and authorization using JWT and OAuth 2.0
+• Designed database schemas and optimized queries for MongoDB and PostgreSQL
+• Integrated third-party services: Stripe (payments), SendGrid (emails), AWS S3 (file storage)
+• Wrote unit and integration tests achieving 85% code coverage
+• Created API documentation using Swagger/OpenAPI
+• Implemented rate limiting and security measures to prevent abuse and attacks
+• Collaborated with frontend team to define API contracts and data models
+
+Tech Stack: Node.js, Express, MongoDB, PostgreSQL, AWS, Jest, Swagger
+
+Junior Backend Developer
+WebSolutions Inc., San Francisco, CA
+January 2018 - February 2019
+
+• Built and maintained backend services for e-commerce platform
+• Developed CRUD APIs for product management, orders, and user accounts
+• Implemented email notification system using nodemailer
+• Performed database migrations and schema changes
+• Fixed bugs and optimized existing codebase
+• Participated in daily standups and sprint retrospectives
+
+Tech Stack: Node.js, Express, MongoDB, Redis
+
+EDUCATION
+---------
+Bachelor of Science in Computer Science
+University of Washington, Seattle
+Graduated: December 2017
+GPA: 3.6/4.0
+
+Relevant Coursework:
+- Data Structures and Algorithms
+- Database Systems
+- Computer Networks
+- Software Engineering
+- Operating Systems
+
+CERTIFICATIONS & TRAINING
+--------------------------
+• AWS Certified Solutions Architect - Associate (2022)
+• MongoDB Certified Developer - Associate (2021)
+• Node.js Application Developer Certification (2020)
+• Docker Certified Associate (2022)
+
+NOTABLE PROJECTS
+----------------
+
+Real-Time Chat Application
+• Built a scalable real-time chat application using Node.js, Socket.io, and MongoDB
+• Supports 10,000+ concurrent connections
+• Features: private messaging, group chats, file sharing, message encryption
+• Deployed on AWS with auto-scaling enabled
+• GitHub: github.com/michaelchen/realtime-chat
+
+API Gateway Service
+• Developed a custom API gateway for microservices architecture
+• Handles request routing, authentication, rate limiting, and logging
+• Reduced latency by 40% compared to previous solution
+• Used by 5+ microservices in production
+
+Open Source Contributions:
+• Express.js - Fixed security vulnerabilities (3 merged PRs)
+• Mongoose - Improved documentation and examples
+• Created npm package for API rate limiting (1,000+ weekly downloads)
+
+TECHNICAL BLOG & SPEAKING
+--------------------------
+• Published 15+ technical articles on Medium and Dev.to
+• Topic: Node.js best practices, MongoDB optimization, microservices
+• Total views: 75,000+
+• Speaker at Node.js Seattle Meetup (3 talks)
+
+ACHIEVEMENTS
+------------
+• "Outstanding Performance Award" at CloudTech Systems (2023)
+• Reduced monthly AWS costs by $5,000 through optimization
+• Successfully led migration project with zero downtime
+• Mentored 5 junior developers in backend development
+
+SOFT SKILLS
+-----------
+• Strong problem-solving abilities
+• Team collaboration and communication
+• Technical leadership and mentoring
+• Time management and meeting deadlines
+• Continuous learning mindset
+• Attention to detail and code quality
+
+LANGUAGES
+---------
+English (Fluent)
+Mandarin Chinese (Native)
+
+INTERESTS & ACTIVITIES
+----------------------
+• Contributing to open-source projects
+• Attending tech conferences (Node.js Interactive, AWS re:Invent)
+• Building side projects and experimenting with new technologies
+• Rock climbing and hiking
+• Chess
+
+REFERENCES
+----------
+Available upon request

@@ -42,7 +42,7 @@ export function AIAssistant() {
 
     try {
       // Send message to backend API
-      const response = await fetch('http://localhost:8000/api/assistant/chat', {
+      const response = await fetch('http://localhost:8001/api/assistant/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -3,7 +3,7 @@ import { Navbar } from '../../components/Navbar';
 import { Sidebar } from '../../components/Sidebar';
 import { RefreshCw, FolderSearch, FileText, ListChecks, GitBranch, Plus } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001';
 
 interface LocalAnalysisData {
   repo_name: string;

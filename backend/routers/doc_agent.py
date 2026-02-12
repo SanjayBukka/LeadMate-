@@ -1,8 +1,9 @@
 """
 DocAgent API Routes
-Endpoints for document analysis, Q&A, and summarization
+Endpoints for document analysis, Q&A, and summarization with SSE streaming support
 """
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 import logging
@@ -10,6 +11,7 @@ import logging
 from models.user import User
 from utils.auth import get_current_user, get_current_teamlead
 from services.doc_agent_service import doc_agent_service
+from services.cache_service import llm_cache
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +87,63 @@ async def chat_with_agent(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error processing your question: {str(e)}"
         )
+
+
+@router.post("/chat/stream")
+async def chat_with_agent_stream(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_teamlead)
+):
+    """
+    Stream chat response from DocAgent using SSE (Server-Sent Events)
+    Real-time token streaming for better UX
+    """
+    try:
+        logger.info(f"DocAgent streaming chat from user {current_user.id} for project {request.project_id}")
+        
+        # Get chat history for context
+        chat_history = doc_agent_service.get_chat_history(
+            startup_id=current_user.startupId,
+            project_id=request.project_id,
+            limit=5
+        )
+        
+        # Stream answer from DocAgent
+        return StreamingResponse(
+            doc_agent_service.answer_question_stream(
+                startup_id=current_user.startupId,
+                project_id=request.project_id,
+                question=request.question,
+                chat_history=chat_history,
+                use_cache=True
+            ),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive"
+            }
+        )
+    
+    except Exception as e:
+        logger.error(f"Error in DocAgent streaming chat: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing chat request: {str(e)}"
+        )
+
+
+@router.get("/cache/stats")
+async def get_cache_stats():
+    """Get LLM cache statistics (public endpoint for monitoring)"""
+    return llm_cache.get_stats()
+
+
+@router.post("/cache/clear")
+async def clear_cache():
+    """Clear LLM cache (public endpoint for testing)"""
+    llm_cache.clear()
+    return {"success": True, "message": "Cache cleared successfully"}
 
 
 @router.post("/summary", response_model=SummaryResponse)

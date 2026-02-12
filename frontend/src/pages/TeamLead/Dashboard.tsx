@@ -44,7 +44,7 @@ export function Dashboard() {
   const loadProjects = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/projects', {
+      const response = await fetch('http://localhost:8001/api/projects', {
         headers: {
           'Authorization': `Bearer ${token}`
         }

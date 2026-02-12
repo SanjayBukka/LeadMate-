@@ -4,7 +4,7 @@ import { Sidebar } from '../../components/Sidebar';
 import { GitBranch, Users, Activity, TrendingUp, Clock, CheckCircle, Plus, RefreshCw, GitCommit, GitMerge, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001';
 
 interface Commit {
   hash: string;

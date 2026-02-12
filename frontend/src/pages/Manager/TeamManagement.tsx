@@ -40,7 +40,7 @@ export function TeamManagement() {
   const fetchTeamLeads = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/auth/users/team-leads', {
+      const response = await fetch('http://localhost:8001/api/auth/users/team-leads', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -66,7 +66,7 @@ export function TeamManagement() {
 
     try {
       // First fetch current user to get startupId
-      const meResponse = await fetch('http://localhost:8000/api/auth/me', {
+      const meResponse = await fetch('http://localhost:8001/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -79,7 +79,7 @@ export function TeamManagement() {
 
       const userData = await meResponse.json();
       
-      const response = await fetch('http://localhost:8000/api/auth/users/add-lead', {
+      const response = await fetch('http://localhost:8001/api/auth/users/add-lead', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ export function TeamManagement() {
     setSuccess('');
 
     try {
-      const response = await fetch(`http://localhost:8000/api/auth/users/${userId}`, {
+      const response = await fetch(`http://localhost:8001/api/auth/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -139,7 +139,7 @@ export function TeamManagement() {
     setSuccess('');
 
     try {
-      const response = await fetch(`http://localhost:8000/api/auth/users/${userId}/activate`, {
+      const response = await fetch(`http://localhost:8001/api/auth/users/${userId}/activate`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`

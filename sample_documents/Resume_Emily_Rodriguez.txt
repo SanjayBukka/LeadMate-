@@ -1,0 +1,201 @@
+EMILY RODRIGUEZ
+Full-Stack Developer
+
+Contact
+-------
+Email: emily.rodriguez@email.com
+Phone: (555) 456-7890
+Location: Austin, TX
+Portfolio: emilyrodriguez.dev
+GitHub: github.com/emilyrodriguez
+LinkedIn: linkedin.com/in/emily-rodriguez-dev
+
+PROFILE
+-------
+Versatile Full-Stack Developer with 4+ years of experience building modern web applications from concept to deployment. Proficient in both frontend and backend technologies with a strong focus on creating seamless user experiences and robust, scalable APIs. Passionate about clean code, best practices, and continuous learning.
+
+TECHNICAL SKILLS
+----------------
+
+Frontend:
+✓ React.js, TypeScript (Advanced) - 4 years
+✓ JavaScript ES6+ (Expert) - 5 years
+✓ Redux, Context API (Advanced)
+✓ HTML5, CSS3, SASS (Expert)
+✓ Tailwind CSS, Bootstrap (Advanced)
+✓ Next.js, Gatsby (Intermediate)
+✓ React Testing Library, Jest
+
+Backend:
+✓ Node.js, Express.js (Advanced) - 4 years
+✓ RESTful API development (Advanced)
+✓ Authentication & Authorization (JWT, OAuth)
+✓ API documentation (Swagger)
+
+Databases:
+✓ MongoDB (Advanced) - 4 years
+✓ PostgreSQL (Intermediate) - 2 years
+✓ Redis for caching (Intermediate)
+
+DevOps & Tools:
+✓ Git, GitHub (Expert)
+✓ Docker (Intermediate)
+✓ AWS (S3, EC2, Lambda) (Intermediate)
+✓ CI/CD (GitHub Actions, CircleCI)
+✓ Nginx, PM2
+
+Additional:
+✓ GraphQL
+✓ Socket.io (WebSockets)
+✓ Payment integration (Stripe)
+✓ Email services (SendGrid)
+✓ Agile/Scrum methodologies
+✓ Responsive design
+✓ Performance optimization
+
+PROFESSIONAL EXPERIENCE
+-----------------------
+
+Full-Stack Developer
+InnovateTech Solutions, Austin, TX
+August 2021 - Present
+
+• Developed and maintained 4 full-stack web applications serving 25,000+ users
+• Built responsive frontends using React, TypeScript, and Tailwind CSS
+• Designed and implemented RESTful APIs with Node.js and Express
+• Reduced page load time by 50% through code optimization and lazy loading
+• Implemented real-time features using WebSockets (Socket.io)
+• Integrated Stripe payment gateway for subscription-based services
+• Created reusable component library, reducing development time by 30%
+• Wrote comprehensive unit and integration tests (80% code coverage)
+• Collaborated with designers and product managers in Agile sprints
+• Mentored 2 junior developers and conducted code reviews
+
+Tech Stack: React, TypeScript, Node.js, Express, MongoDB, Redis, AWS, Docker
+
+Web Developer
+Digital Dynamics, Houston, TX
+February 2020 - July 2021
+
+• Built custom web applications for clients in e-commerce and healthcare sectors
+• Developed frontend interfaces using React and modern CSS techniques
+• Created backend APIs for data management and business logic
+• Implemented user authentication and role-based access control
+• Integrated third-party APIs (Google Maps, social media, analytics)
+• Optimized database queries for better performance
+• Deployed applications to AWS and managed server infrastructure
+• Provided technical support and maintenance for deployed applications
+
+Tech Stack: React, Node.js, Express, MongoDB, MySQL, AWS
+
+Junior Developer
+WebCraft Agency, Dallas, TX
+June 2019 - January 2020
+
+• Developed responsive websites for small businesses and startups
+• Converted design mockups (Figma, Adobe XD) into functional web pages
+• Built custom WordPress themes and plugins
+• Implemented contact forms and email notifications
+• Performed cross-browser testing and bug fixes
+• Maintained existing client websites and implemented updates
+
+Tech Stack: HTML, CSS, JavaScript, React, WordPress, PHP
+
+EDUCATION
+---------
+Bachelor of Science in Computer Science
+University of Texas at Austin
+Graduated: May 2019
+GPA: 3.5/4.0
+
+Dean's List - 2017, 2018, 2019
+
+Relevant Coursework:
+- Web Development
+- Database Management Systems
+- Software Engineering
+- Data Structures and Algorithms
+- Computer Networks
+- Mobile App Development
+
+CERTIFICATIONS
+--------------
+• Full-Stack Web Development Bootcamp Certificate (2019)
+• AWS Certified Cloud Practitioner (2022)
+• MongoDB Developer Certification (2021)
+
+PERSONAL PROJECTS
+-----------------
+
+Task Management App
+• Full-stack MERN application with user authentication
+• Features: task creation, categories, deadlines, priorities, team collaboration
+• Real-time updates using Socket.io
+• Deployed on Heroku with MongoDB Atlas
+• Live: taskmanager-emily.herokuapp.com
+• GitHub: github.com/emilyrodriguez/task-manager
+
+Recipe Sharing Platform
+• Social platform for sharing and discovering recipes
+• Built with React, Node.js, Express, and MongoDB
+• Features: user profiles, recipe upload, ratings, comments, search
+• Image upload to AWS S3
+• GitHub: github.com/emilyrodriguez/recipe-platform
+
+Weather Dashboard
+• Weather application using OpenWeather API
+• Real-time weather data with 7-day forecast
+• Location-based weather with geolocation
+• Built with React and TypeScript
+• Live: weather-dashboard-emily.netlify.app
+
+OPEN SOURCE CONTRIBUTIONS
+--------------------------
+• Contributed to React ecosystem packages
+• Fixed bugs in popular npm libraries (5+ merged PRs)
+• Created and maintain 2 open-source npm packages:
+  - react-form-validator (200+ weekly downloads)
+  - express-api-helpers (150+ weekly downloads)
+
+ACHIEVEMENTS & AWARDS
+---------------------
+• "Employee of the Quarter" - InnovateTech Solutions (Q3 2023)
+• Won "Best Web Application" at Austin Dev Hackathon 2022
+• Completed 100+ LeetCode problems
+• Published 8 technical blog posts with 20,000+ views
+
+COMMUNITY INVOLVEMENT
+---------------------
+• Member of Austin Web Developers Meetup
+• Volunteer coding instructor for Girls Who Code
+• Mentor for junior developers through online platforms
+• Regular participant in local hackathons
+
+SOFT SKILLS
+-----------
+✓ Problem-solving and critical thinking
+✓ Team collaboration and communication
+✓ Time management and multitasking
+✓ Adaptability to new technologies
+✓ Attention to detail
+✓ Self-motivated and continuous learner
+✓ Client communication
+✓ Technical documentation
+
+LANGUAGES
+---------
+• English (Native)
+• Spanish (Native)
+
+HOBBIES & INTERESTS
+-------------------
+• Building side projects and experimenting with new frameworks
+• Reading tech blogs and staying updated with industry trends
+• Attending tech conferences and workshops
+• Photography
+• Hiking and outdoor activities
+• Playing guitar
+
+REFERENCES
+----------
+Available upon request

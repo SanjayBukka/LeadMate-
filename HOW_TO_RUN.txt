@@ -1,0 +1,139 @@
+================================================================================
+                         LEAD MATE - HOW TO RUN
+================================================================================
+
+PREREQUISITES:
+- Python 3.10+
+- Node.js 18+
+- Ollama (with llama3.2:3b model)
+- MongoDB Atlas connection (already configured)
+
+================================================================================
+                              QUICK START
+================================================================================
+
+STEP 1: Start Ollama (if not running)
+--------------------------------------
+Open a terminal and run:
+    ollama serve
+
+Verify model is available:
+    ollama list
+
+
+STEP 2: Start Backend Server
+--------------------------------------
+Open a NEW terminal and run:
+
+    cd "C:\Users\Sanjay\Desktop\Lead Mate full Application\backend"
+    python -m uvicorn main:app --host 127.0.0.1 --port 8001 --reload
+
+Wait for: "Uvicorn running on http://127.0.0.1:8001"
+
+
+STEP 3: Start Frontend Server
+--------------------------------------
+Open a NEW terminal and run:
+
+    cd "C:\Users\Sanjay\Desktop\Lead Mate full Application\frontend"
+    npm run dev
+
+Wait for: "Local: http://localhost:5175"
+
+
+================================================================================
+                              ACCESS URLS
+================================================================================
+
+Frontend App:       http://localhost:5175
+Backend API:        http://127.0.0.1:8001
+API Documentation:  http://127.0.0.1:8001/docs
+Cache Statistics:   http://127.0.0.1:8001/api/agents/doc-agent/cache/stats
+
+
+================================================================================
+                           LOGIN CREDENTIALS
+================================================================================
+
+Email:    test@manager.com
+Password: test123
+
+
+================================================================================
+                           FEATURES AVAILABLE
+================================================================================
+
+1. DOCUMENT AGENT (DocAgent)
+   - Upload project documents
+   - Ask questions about uploaded documents
+   - Real-time SSE streaming responses
+   - LLM response caching for faster repeated queries
+
+2. STACK AGENT
+   - Analyze technology requirements
+   - Get tech stack recommendations
+
+3. TEAM AGENT
+   - Manage team members
+   - Get team formation suggestions
+
+4. TASK BOARD
+   - Create and manage project tasks
+   - Track progress
+
+5. MANAGEMENT
+   - Repository analysis
+   - Project insights
+
+
+================================================================================
+                           TESTING SSE & CACHING
+================================================================================
+
+To test SSE Streaming:
+1. Login and go to AI Agents > Document Agent
+2. Ask any question
+3. Watch tokens appear in real-time (not all at once)
+
+To test LLM Caching:
+1. Ask a question (e.g., "tell me technical challenges")
+2. Wait for response (takes ~5-10 seconds)
+3. Ask the SAME question again
+4. Response should appear instantly (from cache)
+
+Check cache stats:
+    http://127.0.0.1:8001/api/agents/doc-agent/cache/stats
+
+
+================================================================================
+                           TROUBLESHOOTING
+================================================================================
+
+Backend won't start:
+- Check if port 8001 is in use: netstat -ano | findstr :8001
+- Kill the process: taskkill /PID <PID> /F
+
+Ollama errors:
+- Ensure Ollama is running: ollama serve
+- Check model: ollama list
+- Pull model if missing: ollama pull llama3.2:3b
+
+Frontend errors:
+- Install dependencies: npm install
+- Clear cache: npm cache clean --force
+
+MongoDB connection issues:
+- Check .env file for MONGODB_URI
+- Verify network connectivity
+
+
+================================================================================
+                              STOP SERVERS
+================================================================================
+
+To stop any server, press Ctrl+C in its terminal window.
+
+
+================================================================================
+                         Created: February 2026
+================================================================================

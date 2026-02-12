@@ -4,15 +4,20 @@ AI-powered document analyst using CrewAI and RAG
 """
 import os
 # Set environment variables BEFORE importing CrewAI
-os.environ['OPENAI_API_KEY'] = 'not-needed'  # Prevent default OpenAI
+os.environ['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY', 'sk-dummy-not-used')
 os.environ['CREWAI_DISABLE_TELEMETRY'] = 'true'
-# LLM configuration is handled by gemini_service
+# Set Ollama API base for litellm
+os.environ['OLLAMA_API_BASE'] = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 
 from crewai import Agent, Task, Crew, Process
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, AsyncGenerator
 import logging
+import asyncio
+import json
+import ollama
 from services.gemini_service import gemini_service
 from services.vector_store_service import vector_store_service
+from services.cache_service import llm_cache
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +36,12 @@ class DocAgentService:
     def _initialize_agent(self):
         """Initialize the DocAgent with CrewAI"""
         try:
-            # Use Gemini (with Ollama fallback)
-            model_name = gemini_service.crewai_model  # "gemini/gemini-pro" or "ollama/llama3.2:3b"
+            # Get model string for CrewAI (uses litellm format: "ollama/llama3.2:3b")
+            model_name = gemini_service.get_llm()
             
             logger.info(f"Initializing DocAgent with model: {model_name}")
             
-            # Create the DocAgent - CrewAI will handle Ollama via litellm
+            # Create the DocAgent - pass model string (CrewAI will use litellm)
             self.agent = Agent(
                 role='Technical Project Lead & Document Analyst',
                 goal='''Analyze project documents thoroughly and provide strategic insights. 
@@ -48,7 +53,7 @@ class DocAgentService:
                             You combine technical depth with strategic thinking.''',
                 verbose=True,
                 allow_delegation=False,
-                llm=model_name  # Pass model string with provider prefix (gemini/ or ollama/)
+                llm=model_name  # Pass model string (e.g., "ollama/llama3.2:3b")
             )
             
             logger.info(f"DocAgent initialized successfully with model: {model_name}")
@@ -97,16 +102,18 @@ class DocAgentService:
         startup_id: str,
         project_id: str,
         question: str,
-        chat_history: Optional[List[Dict]] = None
+        chat_history: Optional[List[Dict]] = None,
+        use_cache: bool = True
     ) -> str:
         """
-        Answer a question about project documents using RAG
+        Answer a question about project documents using RAG with caching
         
         Args:
             startup_id: Startup identifier
             project_id: Project identifier
             question: User's question
             chat_history: Optional previous chat messages
+            use_cache: Whether to use cached responses (default: True)
         
         Returns:
             Agent's answer
@@ -122,6 +129,17 @@ class DocAgentService:
             
             # Build context string
             context = "\n\n".join(context_docs)
+            
+            # Check cache first
+            if use_cache:
+                cached_response = llm_cache.get(
+                    prompt=question,
+                    context="",  # Don't include context in cache key for better hit rate
+                    model=gemini_service.model
+                )
+                if cached_response:
+                    logger.info("✅ Returning cached response")
+                    return cached_response
             
             # Add chat history if available
             history_context = ""
@@ -166,6 +184,15 @@ class DocAgentService:
             result = crew.kickoff()
             response = str(result)
             
+            # Cache the response
+            if use_cache:
+                llm_cache.set(
+                    prompt=question,
+                    response=response,
+                    context="",  # Don't include context in cache key for better hit rate
+                    model=gemini_service.model
+                )
+            
             # Store in chat history
             vector_store_service.store_chat_message(
                 startup_id=startup_id,
@@ -180,6 +207,121 @@ class DocAgentService:
         except Exception as e:
             logger.error(f"Error answering question: {e}")
             return f"I encountered an error while processing your question: {str(e)}. Please try again or rephrase your question."
+    
+    async def answer_question_stream(
+        self,
+        startup_id: str,
+        project_id: str,
+        question: str,
+        chat_history: Optional[List[Dict]] = None,
+        use_cache: bool = True
+    ) -> AsyncGenerator[str, None]:
+        """
+        Stream answer to a question using SSE (Server-Sent Events)
+        
+        Args:
+            startup_id: Startup identifier
+            project_id: Project identifier
+            question: User's question
+            chat_history: Optional previous chat messages
+            use_cache: Whether to check cache first
+        
+        Yields:
+            Token chunks as they're generated
+        """
+        try:
+            # Get relevant documents
+            context_docs = self._get_relevant_context(
+                startup_id=startup_id,
+                project_id=project_id,
+                query=question,
+                n_results=5
+            )
+            
+            context = "\n\n".join(context_docs)
+            
+            # Check cache first
+            if use_cache:
+                cached_response = llm_cache.get(
+                    prompt=question,
+                    context="",  # Don't include context in cache key for better hit rate
+                    model=gemini_service.model
+                )
+                if cached_response:
+                    logger.info("✅ Streaming cached response")
+                    # Stream cached response word by word for smooth UX with proper spacing
+                    words = cached_response.split()
+                    for i, word in enumerate(words):
+                        # Add space after word except for the last one
+                        token = word + (" " if i < len(words) - 1 else "")
+                        yield f"data: {json.dumps(token)}\n\n"
+                        await asyncio.sleep(0.02)  # Simulate streaming
+                    yield "data: [DONE]\n\n"
+                    return
+            
+            # Build prompt
+            history_context = ""
+            if chat_history and len(chat_history) > 0:
+                history_context = "\n\nPrevious conversation:\n"
+                for msg in chat_history[-3:]:
+                    history_context += f"User: {msg.get('user_message', '')}\n"
+                    history_context += f"DocAgent: {msg.get('agent_response', '')}\n\n"
+            
+            prompt = f'''Based on the project documentation context:
+            
+{context}
+
+{history_context}
+
+Answer this question: {question}
+
+Provide a detailed, technical response and if applicable:
+- Ask follow-up questions for clarification
+- Identify any concerns or risks
+- Suggest actionable next steps
+- Reference specific parts of the documentation
+
+Be conversational and helpful.'''
+            
+            # Stream from Ollama directly
+            full_response = ""
+            stream = ollama.chat(
+                model='llama3.2:3b',
+                messages=[{'role': 'user', 'content': prompt}],
+                stream=True
+            )
+            
+            for chunk in stream:
+                token = chunk['message']['content']
+                if token:  # Only send non-empty tokens
+                    full_response += token
+                    # Send token as JSON to properly preserve spaces and special characters
+                    yield f"data: {json.dumps(token)}\n\n"
+            
+            # Cache the full response
+            if use_cache:
+                llm_cache.set(
+                    prompt=question,
+                    response=full_response,
+                    context="",  # Don't include context in cache key for better hit rate
+                    model=gemini_service.model
+                )
+            
+            # Store in chat history
+            vector_store_service.store_chat_message(
+                startup_id=startup_id,
+                project_id=project_id,
+                user_message=question,
+                agent_response=full_response
+            )
+            
+            yield "data: [DONE]\n\n"
+            logger.info(f"✅ DocAgent streamed answer successfully")
+            
+        except Exception as e:
+            logger.error(f"Error streaming answer: {e}")
+            yield f"data: Error: {str(e)}\n\n"
+            yield "data: [DONE]\n\n"
     
     def generate_project_summary(
         self,

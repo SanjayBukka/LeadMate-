@@ -36,7 +36,7 @@ export function ProjectDetailModal({ isOpen, onClose, project }: ProjectDetailMo
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeStatus, setAnalyzeStatus] = useState<{success: boolean; message: string} | null>(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001';
   const token = localStorage.getItem('authToken');
 
   useEffect(() => {

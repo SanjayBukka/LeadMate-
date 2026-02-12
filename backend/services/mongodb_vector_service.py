@@ -8,7 +8,6 @@ from typing import List, Dict, Optional, Any
 from pymongo import MongoClient
 from bson import ObjectId
 import numpy as np
-from sentence_transformers import SentenceTransformer
 import uuid
 from datetime import datetime
 
@@ -20,12 +19,12 @@ class MongoDBVectorService:
     
     def __init__(self):
         """Initialize MongoDB Vector Service"""
-        self.mongo_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+        self.mongo_uri = os.getenv("MONGODB_URI", os.getenv("MONGODB_URL", "mongodb://localhost:27017"))
         self.client = MongoClient(self.mongo_uri)
         self.db = self.client.leadmate_db
         
-        # Initialize sentence transformer for embeddings
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        # Lazy-load sentence transformer (heavy dependency)
+        self._embedding_model = None
         
         # Collections
         self.documents_collection = self.db.documents
@@ -33,6 +32,20 @@ class MongoDBVectorService:
         
         logger.info("MongoDB Vector Service initialized")
     
+    @property
+    def embedding_model(self):
+        """Lazy-load SentenceTransformer on first use"""
+        if self._embedding_model is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+                self._embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            except ImportError:
+                raise ImportError(
+                    "sentence-transformers is required for MongoDB vector search. "
+                    "Install with: pip install sentence-transformers"
+                )
+        return self._embedding_model
+
     def create_embeddings(self, text: str) -> List[float]:
         """Create embeddings for text using sentence transformers"""
         try:

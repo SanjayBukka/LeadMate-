@@ -1,6 +1,7 @@
 """
 Ollama LLM Service for document processing
 """
+import os
 import ollama
 from typing import Optional
 import logging
@@ -10,12 +11,18 @@ logger = logging.getLogger(__name__)
 class OllamaService:
     """Service for interacting with Ollama LLM"""
     
-    def __init__(self, model: str = "llama3.2:3b"):
+    def __init__(self, model: Optional[str] = None, base_url: Optional[str] = None):
         """
         Initialize Ollama service with specified model
-        Using llama3.2:3b as it's the smallest and fastest
+        Using llama3.2:3b as default - reads from OLLAMA_MODEL env
         """
-        self.model = model
+        try:
+            from config import settings
+            self.model = model or os.getenv("OLLAMA_MODEL", getattr(settings, "OLLAMA_MODEL", "llama3.2:3b"))
+            self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434"))
+        except Exception:
+            self.model = model or os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+            self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         # For CrewAI/litellm, we need to prefix with 'ollama/'
         self.crewai_model = f"ollama/{model}"
         self.client = ollama
@@ -85,7 +92,7 @@ Extracted Content:"""
                     # Create LLM instance with ChatOllama (preferred for CrewAI)
                     self._llm_instance = ChatOllama(
                         model=self.model,
-                        base_url="http://localhost:11434",
+                        base_url=getattr(self, 'base_url', 'http://localhost:11434'),
                         temperature=0.7,
                         num_predict=2000  # Max tokens to generate
                     )
@@ -97,7 +104,7 @@ Extracted Content:"""
                         # Create LLM instance
                         self._llm_instance = OllamaLLM(
                             model=self.model,
-                            base_url="http://localhost:11434",
+                            base_url=getattr(self, 'base_url', 'http://localhost:11434'),
                             temperature=0.7
                         )
                     except ImportError:
@@ -106,7 +113,7 @@ Extracted Content:"""
                         
                         self._llm_instance = OllamaLLM(
                             model=self.model,
-                            base_url="http://localhost:11434",
+                            base_url=getattr(self, 'base_url', 'http://localhost:11434'),
                             temperature=0.7
                         )
                 

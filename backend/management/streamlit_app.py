@@ -15,7 +15,7 @@ _config_module = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_config_module)
 APP_CONFIG = _config_module.APP_CONFIG
 OLLAMA_CONFIG = _config_module.OLLAMA_CONFIG
-from ollama_client import OllamaClient
+from .ollama_client import OllamaClient
 from repo_analyzer import RepoAnalyzer
 from ai_insights import AIInsights
 from data_manager import DataManager

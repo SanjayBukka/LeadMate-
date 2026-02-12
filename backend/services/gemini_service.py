@@ -67,7 +67,8 @@ class GeminiService:
         self.llm_type = None  # 'gemini' or 'ollama'
         self._llm_instance = None
         self.gemini_model = None
-        self.ollama_model = "llama3.2:3b"
+        self.ollama_model = os.getenv("OLLAMA_MODEL", getattr(settings, "OLLAMA_MODEL", "llama3.2:3b"))
+        self.ollama_base_url = os.getenv("OLLAMA_BASE_URL", getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434"))
         self._initialize_llm()
     
     def _try_key_and_set_model(self, api_key: str) -> bool:
@@ -100,9 +101,14 @@ class GeminiService:
         return False
     
     def _initialize_llm(self):
-        """Initialize LLM, trying Gemini first, then Ollama"""
-        # Try Gemini first
-        if GEMINI_AVAILABLE and self.api_keys:
+        """Initialize LLM, trying Gemini first (unless FORCE_OLLAMA), then Ollama"""
+        force_ollama = os.getenv("FORCE_OLLAMA", "").lower() in ("1", "true", "yes")
+        use_gemini = os.getenv("USE_GEMINI", "").lower() in ("1", "true", "yes")
+        # Skip Gemini when FORCE_OLLAMA is set
+        if force_ollama:
+            use_gemini = False
+        # Try Gemini first (only if not forcing Ollama)
+        if not force_ollama and GEMINI_AVAILABLE and self.api_keys and use_gemini:
             for i, api_key in enumerate(self.api_keys):
                 if self._try_key_and_set_model(api_key):
                     self.current_api_key_index = i
@@ -141,8 +147,9 @@ class GeminiService:
             For CrewAI: string model name (e.g., "gemini/gemini-pro" or "ollama/llama3.2:3b")
             For direct use: LangChain LLM instance
         """
-        # Try Gemini first
-        if GEMINI_AVAILABLE and self.api_keys:
+        force_ollama = os.getenv("FORCE_OLLAMA", "").lower() in ("1", "true", "yes")
+        # Try Gemini first (skip when FORCE_OLLAMA is set)
+        if not force_ollama and GEMINI_AVAILABLE and self.api_keys:
             # Ensure the current key still works; if not, rotate through all
             start_idx = self.current_api_key_index if 0 <= self.current_api_key_index < len(self.api_keys) else 0
             indices = list(range(start_idx, len(self.api_keys))) + list(range(0, start_idx))
@@ -210,7 +217,7 @@ class GeminiService:
             try:
                 self._llm_instance = ChatOllama(
                     model=self.ollama_model,
-                    base_url="http://localhost:11434",
+                    base_url=self.ollama_base_url,
                     temperature=0.7,
                     num_predict=2000
                 )
@@ -221,7 +228,7 @@ class GeminiService:
                 try:
                     self._llm_instance = OllamaLLM(
                         model=self.ollama_model,
-                        base_url="http://localhost:11434",
+                        base_url=self.ollama_base_url,
                         temperature=0.7
                     )
                     self.llm_type = 'ollama'

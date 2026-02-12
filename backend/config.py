@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     FORCE_OLLAMA: bool = False
     USE_GEMINI: bool = False
     GOOGLE_API_KEY: Optional[str] = None
+    OPENAI_API_KEY: Optional[str] = None  # For CrewAI/LiteLLM compatibility
+    LITELLM_LOG: Optional[str] = None  # LiteLLM logging level
     
     # CORS Settings
     ALLOWED_ORIGINS: list = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:3000").split(",")

@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Send, Bot, User, Loader2, Sparkles, FileText, Users, CheckSquare, Settings, UserCheck, FolderOpen } from 'lucide-react';
 import { LoadingIndicator } from '../../components/LoadingIndicator';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001';
 
 interface Message {
   id: string;
@@ -68,6 +68,7 @@ export function AIAgents() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [useStreaming, setUseStreaming] = useState(true); // Feature flag for streaming
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get messages for current agent
@@ -185,6 +186,12 @@ export function AIAgents() {
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
+    
+    // Use streaming for DocAgent if enabled
+    if (useStreaming && selectedAgent.id === 'document') {
+      sendMessageStream();
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -289,6 +296,142 @@ export function AIAgents() {
         ...prev,
         [selectedAgent.id]: [...(prev[selectedAgent.id] || []), errorMessage]
       }));
+    } finally {
+      setIsLoading(false);
+      setIsTyping(false);
+    }
+  };
+
+  const sendMessageStream = async () => {
+    if (!inputMessage.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: inputMessage,
+      role: 'user',
+      agent: selectedAgent.name,
+      timestamp: new Date()
+    };
+
+    setAgentMessages(prev => ({
+      ...prev,
+      [selectedAgent.id]: [...(prev[selectedAgent.id] || []), userMessage]
+    }));
+
+    const messageToSend = inputMessage;
+    setInputMessage('');
+    setIsLoading(true);
+    setIsTyping(true);
+
+    // Create placeholder message for streaming
+    const assistantMessageId = (Date.now() + 1).toString();
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      content: '',
+      role: 'assistant',
+      agent: selectedAgent.name,
+      timestamp: new Date()
+    };
+
+    setAgentMessages(prev => ({
+      ...prev,
+      [selectedAgent.id]: [...(prev[selectedAgent.id] || []), assistantMessage]
+    }));
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const requestBody = {
+        project_id: selectedProject || '',
+        question: messageToSend
+      };
+
+      console.log('🌊 Starting SSE stream to:', `${API_BASE_URL}/api/agents/doc-agent/chat/stream`);
+
+      const response = await fetch(`${API_BASE_URL}/api/agents/doc-agent/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('Response body is null');
+      }
+
+      let accumulatedText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.substring(6).trim();
+            
+            if (data === '[DONE]') {
+              console.log('✅ Stream completed');
+              break;
+            }
+
+            if (data && data !== '') {
+              try {
+                // Parse JSON-encoded token to preserve spaces
+                const token = JSON.parse(data);
+                accumulatedText += token;
+              } catch (e) {
+                // Fallback: if not JSON, use raw data
+                accumulatedText += data;
+              }
+              
+              // Update message in real-time
+              setAgentMessages(prev => {
+                const currentMessages = prev[selectedAgent.id] || [];
+                const updatedMessages = currentMessages.map(msg =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: accumulatedText }
+                    : msg
+                );
+                return {
+                  ...prev,
+                  [selectedAgent.id]: updatedMessages
+                };
+              });
+            }
+          }
+        }
+      }
+
+      console.log('✅ Final response:', accumulatedText);
+
+    } catch (error) {
+      console.error('❌ Error in streaming:', error);
+      
+      // Update message with error
+      setAgentMessages(prev => {
+        const currentMessages = prev[selectedAgent.id] || [];
+        const updatedMessages = currentMessages.map(msg =>
+          msg.id === assistantMessageId
+            ? { ...msg, content: `Error: ${error instanceof Error ? error.message : String(error)}` }
+            : msg
+        );
+        return {
+          ...prev,
+          [selectedAgent.id]: updatedMessages
+        };
+      });
     } finally {
       setIsLoading(false);
       setIsTyping(false);

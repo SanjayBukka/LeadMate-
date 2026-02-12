@@ -50,7 +50,7 @@ export function Home() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/register-startup', {
+      const response = await fetch('http://localhost:8001/api/auth/register-startup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

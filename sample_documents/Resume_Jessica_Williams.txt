@@ -1,0 +1,235 @@
+JESSICA WILLIAMS
+UI/UX Designer & Frontend Developer
+
+jessica.williams@email.com | (555) 789-1234 | Denver, CO
+Portfolio: jessicawilliams.design | LinkedIn: linkedin.com/in/jessicawilliams
+
+═══════════════════════════════════════════════════════════════════════
+
+PROFESSIONAL SUMMARY
+───────────────────────────────────────────────────────────────────────
+Creative UI/UX Designer with frontend development skills, bringing 4+ years of experience in designing and building beautiful, user-centered digital products. Proficient in Figma, Adobe Suite, React, and CSS. Strong understanding of design systems, accessibility, and responsive design principles.
+
+DESIGN SKILLS
+───────────────────────────────────────────────────────────────────────
+UI/UX Design:
+• Figma (Expert)
+• Adobe XD (Advanced)
+• Sketch (Intermediate)
+• Adobe Photoshop (Advanced)
+• Adobe Illustrator (Advanced)
+• InVision (Advanced)
+• Prototyping & Wireframing
+• Design Systems
+• User Research & Testing
+• Information Architecture
+• Interaction Design
+• Responsive Design
+
+Frontend Development:
+• HTML5, CSS3, SASS (Expert)
+• React.js (Advanced)
+• JavaScript ES6+ (Advanced)
+• Tailwind CSS (Advanced)
+• Bootstrap, Material-UI (Advanced)
+• CSS animations (Advanced)
+• Responsive frameworks
+
+Tools & Software:
+• Git, GitHub
+• VS Code
+• npm, webpack
+• Chrome DevTools
+• Lottie animations
+• Zeplin, Abstract
+
+UX Skills:
+• User personas & journey mapping
+• Usability testing
+• A/B testing
+• Heuristic evaluation
+• Card sorting
+• User flows & sitemaps
+• Accessibility (WCAG 2.1)
+
+WORK EXPERIENCE
+───────────────────────────────────────────────────────────────────────
+
+Senior UI/UX Designer & Frontend Developer
+CreativeWorks Studio, Denver, CO
+September 2021 - Present
+
+• Lead UI/UX design for 5+ web and mobile applications
+• Create wireframes, prototypes, and high-fidelity mockups using Figma
+• Conduct user research, interviews, and usability testing sessions
+• Design and maintain component library and design system for consistency
+• Collaborate with developers to implement pixel-perfect designs
+• Build responsive frontend interfaces using React and Tailwind CSS
+• Improved user engagement by 45% through redesign of key user flows
+• Reduced customer support tickets by 30% through improved UX
+• Mentor 2 junior designers and conduct design reviews
+• Present design concepts to stakeholders and incorporate feedback
+
+Projects:
+• SaaS Dashboard - Complete redesign increasing user satisfaction by 35%
+• E-commerce Platform - Designed checkout flow reducing cart abandonment by 25%
+• Mobile App UI - Created intuitive interface for 50,000+ users
+
+UI/UX Designer
+DigitalFirst Agency, Boulder, CO
+March 2020 - August 2021
+
+• Designed websites and applications for 15+ clients across various industries
+• Created user personas, user flows, and wireframes for projects
+• Developed brand identities including logos, color palettes, and typography
+• Implemented responsive designs that work across all devices
+• Converted designs to HTML/CSS/JavaScript for static websites
+• Conducted client presentations and incorporated feedback
+• Collaborated with developers to ensure design implementation accuracy
+• Performed competitive analysis and market research
+
+Web Designer & Developer
+Freelance, Denver, CO
+June 2019 - February 2020
+
+• Designed and developed websites for small businesses and startups
+• Created custom WordPress themes with unique designs
+• Built landing pages for marketing campaigns
+• Optimized websites for performance and SEO
+• Provided branding and graphic design services
+• Managed client relationships and project timelines
+
+EDUCATION
+───────────────────────────────────────────────────────────────────────
+Bachelor of Fine Arts in Graphic Design
+University of Colorado Denver
+Graduated: May 2019 | GPA: 3.8/4.0
+
+Relevant Coursework:
+- User Experience Design
+- Web Design & Development
+- Typography
+- Color Theory
+- Brand Identity Design
+- Interactive Media
+
+CERTIFICATIONS
+───────────────────────────────────────────────────────────────────────
+• Google UX Design Professional Certificate (2021)
+• Adobe Certified Expert - Photoshop (2020)
+• Frontend Developer Certification - freeCodeCamp (2019)
+• Interaction Design Foundation - UX Design Course (2020)
+
+PORTFOLIO HIGHLIGHTS
+───────────────────────────────────────────────────────────────────────
+
+FinTech Dashboard
+• Designed comprehensive dashboard for financial analytics platform
+• Features: data visualization, customizable widgets, dark mode
+• Improved data readability and user task completion rate by 40%
+• Tools: Figma, React, Chart.js, Tailwind CSS
+
+Healthcare Mobile App
+• Created patient portal app connecting users with healthcare providers
+• Conducted user research with 20+ patients to inform design decisions
+• Designed intuitive appointment booking and telemedicine interface
+• Achieved 4.8/5 App Store rating
+
+Social Media Platform Redesign
+• Complete UI overhaul of existing social platform
+• Implemented modern, engaging design with improved navigation
+• Increased user time on platform by 50%
+• Created comprehensive 100+ component design system
+
+DESIGN PROJECTS (Side Projects)
+───────────────────────────────────────────────────────────────────────
+
+Daily UI Challenge
+• Completed 100-day design challenge creating various UI elements
+• Explored different styles, trends, and design patterns
+• View on Dribbble: dribbble.com/jessicawilliams
+
+Icon Library
+• Created open-source icon set with 200+ customizable SVG icons
+• 500+ downloads on Figma Community
+• Available at: icons.jessicawilliams.design
+
+Design System Kit
+• Built comprehensive design system template for Figma
+• Includes components, typography, colors, spacing
+• Featured on Figma Community with 1,000+ duplicates
+
+AWARDS & RECOGNITION
+───────────────────────────────────────────────────────────────────────
+• Awwwards - Honorable Mention (2023)
+• CSS Design Awards - Best UI Design (2022)
+• Denver Design Week - Emerging Designer Award (2021)
+• Featured on Dribbble's "Best of Web Design" (2022)
+
+SPEAKING & COMMUNITY
+───────────────────────────────────────────────────────────────────────
+• Speaker at Denver Design Meetup - "Building Design Systems" (2023)
+• Workshop Host - "Figma for Beginners" (50+ attendees)
+• Mentor for Women in Tech Denver
+• Contributing writer for design blogs (Medium, UX Collective)
+• Active on Design Twitter with 2,000+ followers
+
+SKILLS PROFICIENCY
+───────────────────────────────────────────────────────────────────────
+Design Tools:        ████████████████████ 100%
+Frontend Dev:        ██████████████░░░░░░  70%
+User Research:       ████████████████░░░░  80%
+Prototyping:         ███████████████████░  95%
+React:               ██████████████░░░░░░  70%
+HTML/CSS:            ████████████████████ 100%
+Accessibility:       ████████████████░░░░  80%
+Animation:           ██████████████░░░░░░  70%
+
+SOFT SKILLS
+───────────────────────────────────────────────────────────────────────
+✓ Creative problem-solving
+✓ Attention to detail
+✓ Client communication
+✓ Team collaboration
+✓ Time management
+✓ Presentation skills
+✓ Empathy for users
+✓ Adaptability
+✓ Critical thinking
+
+TOOLS I USE DAILY
+───────────────────────────────────────────────────────────────────────
+Design: Figma, Adobe Photoshop, Adobe Illustrator
+Development: VS Code, Chrome DevTools, Git
+Prototyping: Figma, Adobe XD, InVision
+Collaboration: Slack, Notion, Jira, Miro
+Project Management: Asana, Trello
+
+DESIGN PHILOSOPHY
+───────────────────────────────────────────────────────────────────────
+"Great design is invisible. It should feel natural, intuitive, and 
+empower users to accomplish their goals effortlessly. I believe in 
+designing with empathy, backed by data, and always keeping accessibility 
+at the forefront of every decision."
+
+INTERESTS
+───────────────────────────────────────────────────────────────────────
+• Exploring new design trends and technologies
+• Contributing to design communities (Dribbble, Behance)
+• Photography and visual arts
+• Attending design conferences
+• Traveling and experiencing different cultures
+• Yoga and mindfulness
+• Reading design and UX books
+
+LANGUAGES
+───────────────────────────────────────────────────────────────────────
+English (Native) | Spanish (Intermediate)
+
+REFERENCES
+───────────────────────────────────────────────────────────────────────
+Available upon request
+
+═══════════════════════════════════════════════════════════════════════
+View my portfolio: www.jessicawilliams.design
+═══════════════════════════════════════════════════════════════════════

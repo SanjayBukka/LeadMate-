@@ -337,8 +337,8 @@ What would you like to know about team formation for your project?"""
             results = self.docs_collection.get(
                 where={
                     "$and": [
-                        {"company_id": self.company_id},
-                        {"lead_id": self.lead_id}
+                        {"company_id": {"$eq": self.company_id}},
+                        {"lead_id": {"$eq": self.lead_id}}
                     ]
                 },
                 limit=5
@@ -361,8 +361,8 @@ What would you like to know about team formation for your project?"""
             results = self.stack_collection.get(
                 where={
                     "$and": [
-                        {"company_id": self.company_id},
-                        {"lead_id": self.lead_id}
+                        {"company_id": {"$eq": self.company_id}},
+                        {"lead_id": {"$eq": self.lead_id}}
                     ]
                 },
                 limit=3
@@ -385,8 +385,8 @@ What would you like to know about team formation for your project?"""
             results = self.chat_collection.get(
                 where={
                     "$and": [
-                        {"company_id": self.company_id},
-                        {"lead_id": self.lead_id}
+                        {"company_id": {"$eq": self.company_id}},
+                        {"lead_id": {"$eq": self.lead_id}}
                     ]
                 },
                 limit=5
@@ -445,8 +445,8 @@ What would you like to know about team formation for your project?"""
             results = self.team_collection.get(
                 where={
                     "$and": [
-                        {"company_id": self.company_id},
-                        {"lead_id": self.lead_id}
+                        {"company_id": {"$eq": self.company_id}},
+                        {"lead_id": {"$eq": self.lead_id}}
                     ]
                 }
             )

@@ -26,7 +26,7 @@ export function DocumentAnalysis({ projectId }: DocumentAnalysisProps) {
   const loadAnalyses = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`http://localhost:8000/api/documents/analysis/${projectId}`, {
+      const response = await fetch(`http://localhost:8001/api/documents/analysis/${projectId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

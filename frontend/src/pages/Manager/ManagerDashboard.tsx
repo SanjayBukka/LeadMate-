@@ -58,7 +58,7 @@ export function ManagerDashboard() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/api/projects/${projectId}`, {
+      const response = await fetch(`http://localhost:8001/api/projects/${projectId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -99,10 +99,10 @@ export function ManagerDashboard() {
     try {
       // Load projects and team leads in parallel
       const [projectsResponse, teamLeadsResponse] = await Promise.all([
-        fetch('http://localhost:8000/api/projects', {
+        fetch('http://localhost:8001/api/projects', {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch('http://localhost:8000/api/auth/users/team-leads', {
+        fetch('http://localhost:8001/api/auth/users/team-leads', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
@@ -142,7 +142,7 @@ export function ManagerDashboard() {
 
   const handleCreateProject = async (projectData: any) => {
     try {
-      const response = await fetch('http://localhost:8000/api/projects', {
+      const response = await fetch('http://localhost:8001/api/projects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -186,7 +186,7 @@ export function ManagerDashboard() {
               }
             });
 
-            xhr.open('POST', `http://localhost:8000/api/documents/upload/${newProject._id}`);
+            xhr.open('POST', `http://localhost:8001/api/documents/upload/${newProject._id}`);
             xhr.setRequestHeader('Authorization', `Bearer ${token}`);
             xhr.send(formData);
           } catch (uploadError) {

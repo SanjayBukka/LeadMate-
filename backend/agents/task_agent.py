@@ -279,14 +279,15 @@ class TaskAgent:
     def get_all_tasks(self, project_name: Optional[str] = None) -> List[Dict]:
         """Get all tasks for this lead, optionally filtered by project"""
         try:
-            where_filter = {
-                "company_id": self.company_id,
-                "lead_id": self.lead_id
-            }
-            
+            # ChromaDB requires $and/$eq format for multi-field where clauses
+            conditions = [
+                {"company_id": {"$eq": self.company_id}},
+                {"lead_id": {"$eq": self.lead_id}}
+            ]
             if project_name:
-                where_filter["project_name"] = project_name
-            
+                conditions.append({"project_name": {"$eq": project_name}})
+            where_filter = {"$and": conditions}
+
             results = self.tasks_collection.get(where=where_filter)
             
             tasks = []
@@ -581,8 +582,8 @@ Would you like to upload some project documents now, or do you have any general 
             results = self.doc_chat_collection.get(
                 where={
                     "$and": [
-                        {"company_id": self.company_id},
-                        {"lead_id": self.lead_id}
+                        {"company_id": {"$eq": self.company_id}},
+                        {"lead_id": {"$eq": self.lead_id}}
                     ]
                 }
             )

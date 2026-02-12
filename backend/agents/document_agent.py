@@ -11,7 +11,10 @@ from pathlib import Path
 import chromadb
 from chromadb.config import Settings
 from crewai import Agent, Task, Crew, Process
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+try:
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+except ImportError:
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
 import PyPDF2
 from docx import Document as DocxDocument
 import io
@@ -585,8 +588,8 @@ class DocumentAgent:
             results = self.docs_collection.get(
                 where={
                     "$and": [
-                        {"company_id": self.company_id},
-                        {"lead_id": self.lead_id}
+                        {"company_id": {"$eq": self.company_id}},
+                        {"lead_id": {"$eq": self.lead_id}}
                     ]
                 }
             )
@@ -799,8 +802,8 @@ Would you like to upload some documents now, or do you have any general question
             results = self.chat_collection.get(
                 where={
                     "$and": [
-                        {"company_id": self.company_id},
-                        {"lead_id": self.lead_id}
+                        {"company_id": {"$eq": self.company_id}},
+                        {"lead_id": {"$eq": self.lead_id}}
                     ]
                 }
             )
@@ -830,8 +833,10 @@ Would you like to upload some documents now, or do you have any general question
         try:
             all_docs = self.docs_collection.get(
                 where={
-                    "company_id": self.company_id,
-                    "lead_id": self.lead_id
+                    "$and": [
+                        {"company_id": {"$eq": self.company_id}},
+                        {"lead_id": {"$eq": self.lead_id}}
+                    ]
                 }
             )
             

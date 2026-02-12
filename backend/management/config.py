@@ -11,11 +11,13 @@ class OllamaConfig:
     
     def __post_init__(self):
         if self.models is None:
+            # Prefer llama3.2:3b - widely available via Ollama
+            default_model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
             self.models = {
-                "quick": "llama3.2:3b",      # Fast responses
-                "detailed": "llama3.1:8b",   # Detailed analysis
-                "balanced": "mistral:7b",    # Balanced performance
-                "fallback": "llama2:latest"  # Backup option
+                "quick": default_model,
+                "detailed": "llama3.1:8b",
+                "balanced": default_model,
+                "fallback": "llama2:latest"
             }
 
 @dataclass

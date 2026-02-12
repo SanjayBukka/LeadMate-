@@ -149,8 +149,8 @@ class TeamAgent:
             results = self.chat_collection.get(
                 where={
                     "$and": [
-                        {"company_id": self.company_id},
-                        {"lead_id": self.lead_id}
+                        {"company_id": {"$eq": self.company_id}},
+                        {"lead_id": {"$eq": self.lead_id}}
                     ]
                 }
             )

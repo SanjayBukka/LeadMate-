@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import Dict, List, Optional
 import logging
-from ollama_client import OllamaClient
+from .ollama_client import OllamaClient
 
 logger = logging.getLogger(__name__)
 

@@ -47,7 +47,7 @@ export function CreateProjectModal({ isOpen, onClose, onSubmit }: CreateProjectM
   const loadTeamLeads = async () => {
     setIsLoadingLeads(true);
     try {
-      const response = await fetch('http://localhost:8000/api/auth/users/team-leads', {
+      const response = await fetch('http://localhost:8001/api/auth/users/team-leads', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
