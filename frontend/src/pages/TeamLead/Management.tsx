@@ -110,9 +110,13 @@ export function Management() {
     setLoading(true);
     setResult(null);
     try {
+      const token = localStorage.getItem('authToken');
       const response = await fetch(`${API_BASE_URL}/api/workflow/analyze-repo`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
         body: JSON.stringify({ repo_url: `local:${localPath}`, repo_name: localName || 'local-repo', max_commits: 100 })
       });
       const data = await response.json();
@@ -145,34 +149,40 @@ export function Management() {
     if (!repoUrl) return;
     setLoading(true);
     setRepoResult(null);
+    setRepoCommits([]);
+    setRepoDevelopers([]);
+    setRepoStats(null);
     try {
+      const token = localStorage.getItem('authToken');
       const response = await fetch(`${API_BASE_URL}/api/workflow/analyze-repo`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
         body: JSON.stringify({ repo_url: repoUrl, repo_name: repoName || 'repo', max_commits: 100 })
       });
       const data = await response.json();
       if (!response.ok || !data?.success) {
-        alert(data?.message || 'Failed to analyze repository');
+        alert(data?.detail || data?.message || 'Failed to analyze repository');
         return;
       }
-      const payload = data.data || {};
-      setRepoName(payload.repo_name || repoName);
-      setRepoResult({ file_analysis: payload.file_analysis, recent_activity: payload.recent_activity });
-      // Also fetch details via workflow endpoints for consistency
-      try {
-        const [statsRes, devRes, commitsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/workflow/repo/${payload.repo_name || repoName}/stats`),
-          fetch(`${API_BASE_URL}/api/workflow/repo/${payload.repo_name || repoName}/developers`),
-          fetch(`${API_BASE_URL}/api/workflow/repo/${payload.repo_name || repoName}/commits?limit=100`)
-        ]);
-        if (statsRes.ok) setRepoStats(await statsRes.json());
-        if (devRes.ok) setRepoDevelopers(await devRes.json());
-        if (commitsRes.ok) {
-          const cd = await commitsRes.json();
-          setRepoCommits(cd.commits || []);
-        }
-      } catch {}
+      
+      // Use data directly from response
+      setRepoName(data.repo_name);
+      setRepoResult({ file_analysis: data.file_analysis, recent_activity: data.recent_activity });
+      setRepoCommits(data.commits || []);
+      setRepoDevelopers((data.developer_stats || []).map((d: any) => ({ ...d, developer: d.author })));
+      
+      // Set stats from returned data
+      setRepoStats({
+        total_commits: (data.commits || []).length,
+        active_developers: new Set((data.commits || []).map((c: any) => c.author)).size,
+        recent_commits: data.recent_activity?.total_commits || 0,
+        lines_added: data.recent_activity?.lines_added || 0,
+        lines_removed: data.recent_activity?.lines_removed || 0,
+        file_types: data.file_analysis || {}
+      });
     } catch (e) {
       console.error(e);
       alert('Error analyzing repository');
@@ -197,6 +207,7 @@ export function Management() {
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg p-6 mb-8">
               <div className="flex flex-wrap gap-2">
                 {[
+                  { label: 'Lead Mate (Full Project)', path: 'C:/Users/Sanjay/Desktop/Lead Mate full Application', name: 'leadmate-full' },
                   { label: 'DocAgent', path: 'C:/Users/Sanjay/Desktop/Lead Mate full Application/backend models/DocAgent', name: 'docagent-local' },
                   { label: 'managemnet', path: 'C:/Users/Sanjay/Desktop/Lead Mate full Application/managemnet', name: 'management-local' },
                   { label: 'Team', path: 'C:/Users/Sanjay/Desktop/Lead Mate full Application/backend models/Team', name: 'team-local' },
@@ -604,18 +615,31 @@ export function Management() {
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Code Clarity Agent</h3>
                     <button
                       onClick={async () => {
-                        if (!repoName) return;
+                        if (!repoName) {
+                          alert('Please analyze a repository first');
+                          return;
+                        }
+                        setLoading(true);
                         try {
-                          const r = await fetch(`${API_BASE_URL}/api/workflow/repo/${repoName}/clarity`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } });
+                          const token = localStorage.getItem('authToken');
+                          const r = await fetch(`${API_BASE_URL}/api/workflow/repo/${repoName}/clarity`, { 
+                            headers: { 'Authorization': `Bearer ${token}` } 
+                          });
                           if (r.ok) {
                             const d = await r.json();
                             setRepoClarity(d);
                           } else {
-                            runCodeClarity();
+                            const err = await r.json().catch(() => ({}));
+                            alert(err.detail || 'Failed to get clarity analysis');
                           }
-                        } catch { runCodeClarity(); }
+                        } catch (e) {
+                          console.error(e);
+                          alert('Error analyzing code clarity');
+                        } finally {
+                          setLoading(false);
+                        }
                       }}
-                      disabled={loading}
+                      disabled={loading || !repoName}
                       className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50"
                     >
                       Analyze Clarity
